@@ -9,6 +9,7 @@ import DocumentDetail from "./pages/DocumentDetail";
 import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
+import Trash from "./pages/Trash";
 
 import "./App.css";
 
@@ -27,6 +28,7 @@ function App() {
           <Route path="/documents/:documentId" element={<DocumentDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/trash" element={<Trash />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 

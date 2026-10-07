@@ -24,9 +24,11 @@ const saveDocuments = (documents) => {
 export const documentService = {
   // Get all documents (can filter or search if needed, but we can do it on frontend)
   getDocuments: async () => {
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 600));
-    return getStoredDocuments();
+    const docs = getStoredDocuments();
+    // In future, this will only fetch docs for current user + shared. 
+    // For now, filter active only.
+    return docs.filter(doc => doc.deletedAt === null);
   },
 
   // Get single document by ID
@@ -75,7 +77,7 @@ export const documentService = {
     const docs = getStoredDocuments();
     // Filter docs where currentUser's email is in favoritedBy and doc is not in trash
     // (Trash logic is not implemented yet, so we assume all are active for now)
-    return docs.filter(doc => doc.favoritedBy && doc.favoritedBy.includes(currentUser.email));
+    return docs.filter(doc => doc.favoritedBy && doc.favoritedBy.includes(currentUser.email) && doc.deletedAt === null);
   },
 
 
@@ -136,7 +138,8 @@ export const documentService = {
       description: description,
       favoritedBy: [],
       category: category,
-      tags: tags
+      tags: tags,
+      deletedAt: null
     };
 
     docs.unshift(newDoc); // Add to beginning of list
@@ -144,16 +147,67 @@ export const documentService = {
     return newDoc;
   },
 
-  // Delete document
-  deleteDocument: async (documentId) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const docs = getStoredDocuments();
-    const filteredDocs = docs.filter((d) => d.documentId !== documentId);
-    
-    if (docs.length === filteredDocs.length) {
-      throw new Error("Không tìm thấy tài liệu để xóa!");
-    }
+  // Get trashed documents
+  getTrashedDocuments: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
 
+    const docs = getStoredDocuments();
+    return docs.filter(doc => doc.owner === currentUser.email && doc.deletedAt !== null);
+  },
+
+  // Move document to Trash (Soft Delete)
+  moveToTrash: async (documentId) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const docIndex = docs.findIndex((d) => d.documentId === documentId);
+    if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
+
+    const doc = docs[docIndex];
+    if (doc.owner !== currentUser.email) throw new Error("Chỉ chủ sở hữu mới có quyền đưa vào thùng rác!");
+
+    doc.deletedAt = new Date().toISOString();
+    docs[docIndex] = doc;
+    saveDocuments(docs);
+    return doc;
+  },
+
+  // Restore document from Trash
+  restoreFromTrash: async (documentId) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const docIndex = docs.findIndex((d) => d.documentId === documentId);
+    if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
+
+    const doc = docs[docIndex];
+    if (doc.owner !== currentUser.email) throw new Error("Chỉ chủ sở hữu mới có quyền khôi phục!");
+
+    doc.deletedAt = null;
+    doc.updatedAt = new Date().toISOString();
+    docs[docIndex] = doc;
+    saveDocuments(docs);
+    return doc;
+  },
+
+  // Permanently delete document
+  permanentlyDelete: async (documentId) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const doc = docs.find((d) => d.documentId === documentId);
+    if (!doc) throw new Error("Không tìm thấy tài liệu!");
+    if (doc.owner !== currentUser.email) throw new Error("Chỉ chủ sở hữu mới có quyền xóa vĩnh viễn!");
+
+    const filteredDocs = docs.filter((d) => d.documentId !== documentId);
     saveDocuments(filteredDocs);
     return { success: true };
   },
