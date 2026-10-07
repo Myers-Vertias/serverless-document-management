@@ -40,6 +40,44 @@ export const documentService = {
     return doc;
   },
 
+  // Toggle Favorite
+  toggleFavorite: async (documentId) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const docIndex = docs.findIndex((d) => d.documentId === documentId);
+    if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
+
+    const doc = docs[docIndex];
+    if (!doc.favoritedBy) doc.favoritedBy = [];
+
+    const userEmail = currentUser.email;
+    const isFavorited = doc.favoritedBy.includes(userEmail);
+
+    if (isFavorited) {
+      doc.favoritedBy = doc.favoritedBy.filter(email => email !== userEmail);
+    } else {
+      doc.favoritedBy.push(userEmail);
+    }
+
+    saveDocuments(docs);
+    return doc;
+  },
+
+  // Get favorite documents
+  getFavoriteDocuments: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    // Filter docs where currentUser's email is in favoritedBy and doc is not in trash
+    // (Trash logic is not implemented yet, so we assume all are active for now)
+    return docs.filter(doc => doc.favoritedBy && doc.favoritedBy.includes(currentUser.email));
+  },
+
   // Upload document
   // In future AWS, this would:
   // 1. Ask Lambda for an S3 Presigned URL (POST /documents)
@@ -68,7 +106,8 @@ export const documentService = {
       owner: currentUser ? currentUser.email : "guest@university.edu.vn",
       status: "active", // In real life, could be "processing" until Lambda triggers finish processing
       s3Key: `uploads/${docId}/${file.name}`,
-      description: description
+      description: description,
+      favoritedBy: []
     };
 
     docs.unshift(newDoc); // Add to beginning of list

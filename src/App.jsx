@@ -8,6 +8,7 @@ import Documents from "./pages/Documents";
 import DocumentDetail from "./pages/DocumentDetail";
 import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
+import Favorites from "./pages/Favorites";
 
 import "./App.css";
 
@@ -24,6 +25,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/documents/:documentId" element={<DocumentDetail />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/profile" element={<Profile />} />
         </Route>

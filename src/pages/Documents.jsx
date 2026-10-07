@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { documentService } from "../services/documentService";
+import { authService } from "../services/authService";
 
 const Documents = () => {
   const [documents, setDocuments] = useState([]);
@@ -11,6 +12,7 @@ const Documents = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
+  const currentUser = authService.getCurrentUser();
 
   const loadDocuments = async () => {
     try {
@@ -35,6 +37,18 @@ const Documents = () => {
     } catch (err) {
       console.error(err);
       showFeedback("error", "Lỗi khi tải xuống tài liệu!");
+    }
+  };
+
+  const handleToggleFavorite = async (doc) => {
+    try {
+      const updatedDoc = await documentService.toggleFavorite(doc.documentId);
+      setDocuments((prevDocs) => 
+        prevDocs.map((d) => (d.documentId === doc.documentId ? updatedDoc : d))
+      );
+    } catch (err) {
+      console.error(err);
+      showFeedback("error", err.message || "Lỗi khi cập nhật mục yêu thích!");
     }
   };
 
@@ -189,7 +203,9 @@ const Documents = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredDocuments.map((doc) => (
+                {filteredDocuments.map((doc) => {
+                  const isFavorited = doc.favoritedBy && currentUser && doc.favoritedBy.includes(currentUser.email);
+                  return (
                   <tr key={doc.documentId}>
                     <td>
                       <div className="file-name-cell-large">
@@ -212,6 +228,21 @@ const Documents = () => {
                     </td>
                     <td>
                       <div className="action-buttons justify-end">
+                        <button 
+                          className="btn-icon-action" 
+                          onClick={() => handleToggleFavorite(doc)}
+                          title={isFavorited ? "Bỏ yêu thích" : "Yêu thích"}
+                        >
+                          {isFavorited ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="icon-sm text-warning" style={{ color: '#f59e0b' }}>
+                              <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon-sm">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                            </svg>
+                          )}
+                        </button>
                         <Link to={`/documents/${doc.documentId}`} className="btn-icon-action" title="Xem chi tiết">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon-sm">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
@@ -239,7 +270,8 @@ const Documents = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
