@@ -1,0 +1,230 @@
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { documentService } from "../services/documentService";
+
+const DocumentDetail = () => {
+  const { documentId } = useParams();
+  const navigate = useNavigate();
+  const [document, setDocument] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchDocument = async () => {
+      try {
+        const data = await documentService.getDocumentById(documentId);
+        setDocument(data);
+      } catch (err) {
+        setError(err.message || "Không thể tìm thấy tài liệu này!");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocument();
+  }, [documentId]);
+
+  const handleDownload = async () => {
+    if (!document) return;
+    try {
+      await documentService.downloadDocument(document);
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi tải tài liệu!");
+    }
+  };
+
+  const handleDelete = async () => {
+    setActionLoading(true);
+    try {
+      await documentService.deleteDocument(documentId);
+      navigate("/documents");
+    } catch (err) {
+      alert(err.message || "Không thể xóa tài liệu!");
+      setActionLoading(false);
+    }
+  };
+
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-wrapper">
+        <div className="spinner"></div>
+        <p>Đang tải thông tin chi tiết tài liệu...</p>
+      </div>
+    );
+  }
+
+  if (error || !document) {
+    return (
+      <div className="error-container-page">
+        <div className="error-card">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="error-icon">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+          <h2>Không tìm thấy tệp tin!</h2>
+          <p>{error || "Yêu cầu tệp không hợp lệ hoặc đã bị xóa."}</p>
+          <Link to="/documents" className="btn btn-primary">Quay lại danh sách</Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="document-detail-page">
+      {/* Navigation Breadcrumb */}
+      <div className="breadcrumb">
+        <Link to="/documents">Kho tài liệu</Link>
+        <span className="separator">/</span>
+        <span className="current">{document.fileName}</span>
+      </div>
+
+      <div className="detail-layout">
+        {/* Main Details Card */}
+        <div className="card main-detail-card">
+          <div className="detail-header-section">
+            <div className={`large-file-icon file-${document.fileType}`}>
+              <span>{document.fileType.toUpperCase()}</span>
+            </div>
+            <div className="header-info">
+              <h2>{document.fileName}</h2>
+              <p className="doc-id">Mã tài liệu: {document.documentId}</p>
+            </div>
+          </div>
+
+          <div className="detail-body-section">
+            <h3 className="section-title">Siêu dữ liệu chi tiết (DynamoDB Fields)</h3>
+            <div className="meta-fields-grid">
+              <div className="meta-field-item">
+                <span className="meta-label">Tên tệp tin gốc</span>
+                <span className="meta-val">{document.fileName}</span>
+              </div>
+              <div className="meta-field-item">
+                <span className="meta-label">Định dạng tệp</span>
+                <span className="meta-val-badge">
+                  <span className={`badge badge-file-${document.fileType}`}>{document.fileType.toUpperCase()}</span>
+                </span>
+              </div>
+              <div className="meta-field-item">
+                <span className="meta-label">Kích thước tệp</span>
+                <span className="meta-val">{formatBytes(document.fileSize)} ({document.fileSize.toLocaleString()} bytes)</span>
+              </div>
+              <div className="meta-field-item">
+                <span className="meta-label">Người sở hữu (Owner)</span>
+                <span className="meta-val">{document.owner}</span>
+              </div>
+              <div className="meta-field-item">
+                <span className="meta-label">Ngày khởi tạo</span>
+                <span className="meta-val">{formatDate(document.createdAt)}</span>
+              </div>
+              <div className="meta-field-item">
+                <span className="meta-label">Ngày cập nhật</span>
+                <span className="meta-val">{formatDate(document.updatedAt)}</span>
+              </div>
+              <div className="meta-field-item full-width">
+                <span className="meta-label">Đường dẫn AWS S3 Key</span>
+                <span className="meta-val s3-key-val">
+                  <code>s3://{import.meta.env.VITE_S3_BUCKET_NAME || "uni-document-bucket-prod"}/{document.s3Key}</code>
+                </span>
+              </div>
+              {document.description && (
+                <div className="meta-field-item full-width">
+                  <span className="meta-label">Mô tả tài liệu</span>
+                  <span className="meta-val desc-val">{document.description}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Actions Card */}
+        <div className="card actions-sidebar-card">
+          <h3>Thao tác tài liệu</h3>
+          <p className="actions-hint">Nhấp vào bên dưới để thao tác trực tiếp với tài nguyên cloud.</p>
+          
+          <div className="action-buttons-stack">
+            <button className="btn btn-primary" onClick={handleDownload}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="btn-icon">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Tải xuống (S3 Presigned)
+            </button>
+            <button className="btn btn-danger-outline" onClick={() => setDeleteModalOpen(true)}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="btn-icon">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+              Xóa tài liệu (S3 & DB)
+            </button>
+            <Link to="/documents" className="btn btn-secondary-outline text-center">
+              Quay lại danh sách
+            </Link>
+          </div>
+
+          <div className="s3-info-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="badge-icon">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+            <div>
+              <strong>Liên kết an toàn</strong>
+              <p>Mọi yêu cầu tải tệp đều sử dụng chữ ký điện tử AWS Signature Version 4 để ngăn chặn truy cập trái phép.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Xác nhận xóa tài liệu</h3>
+              <button className="modal-close-btn" onClick={() => setDeleteModalOpen(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Bạn có chắc muốn xóa vĩnh viễn tệp <strong>{document.fileName}</strong>?</p>
+              <p className="delete-warning">Thao tác này sẽ xóa tệp tin trong AWS S3 Bucket và bản ghi siêu dữ liệu tương ứng trong DynamoDB.</p>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={actionLoading}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleDelete}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Đang xóa..." : "Xác nhận xóa tệp"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DocumentDetail;

@@ -1,0 +1,57 @@
+export const mockDocuments = [
+  {
+    documentId: "doc-001",
+    fileName: "Bao_Cao_Nghien_Cuu_AWS.pdf",
+    fileType: "pdf",
+    fileSize: 2450000, // in bytes (~2.3 MB)
+    createdAt: "2026-10-01T08:30:00Z",
+    updatedAt: "2026-10-01T08:30:00Z",
+    owner: "nguyen.van.a@university.edu.vn",
+    status: "active",
+    s3Key: "uploads/doc-001/Bao_Cao_Nghien_Cuu_AWS.pdf"
+  },
+  {
+    documentId: "doc-002",
+    fileName: "Slide_Thuyet_Trinh_Giua_Ky.pptx",
+    fileType: "pptx",
+    fileSize: 4500000, // in bytes (~4.3 MB)
+    createdAt: "2026-10-02T14:15:00Z",
+    updatedAt: "2026-10-03T09:00:00Z",
+    owner: "tran.thi.b@university.edu.vn",
+    status: "active",
+    s3Key: "uploads/doc-002/Slide_Thuyet_Trinh_Giua_Ky.pptx"
+  },
+  {
+    documentId: "doc-003",
+    fileName: "Danh_Sach_Sinh_Vien_Nhom_5.xlsx",
+    fileType: "xlsx",
+    fileSize: 152000, // ~148 KB
+    createdAt: "2026-10-04T10:00:00Z",
+    updatedAt: "2026-10-04T10:00:00Z",
+    owner: "nguyen.van.a@university.edu.vn",
+    status: "active",
+    s3Key: "uploads/doc-003/Danh_Sach_Sinh_Vien_Nhom_5.xlsx"
+  },
+  {
+    documentId: "doc-004",
+    fileName: "Kien_Truc_He_Thong_Serverless.png",
+    fileType: "png",
+    fileSize: 850000, // ~830 KB
+    createdAt: "2026-10-05T16:45:00Z",
+    updatedAt: "2026-10-05T16:45:00Z",
+    owner: "le.van.c@university.edu.vn",
+    status: "processing", // simulates S3 file processing / antivirus scan / indexing
+    s3Key: "uploads/doc-004/Kien_Truc_He_Thong_Serverless.png"
+  },
+  {
+    documentId: "doc-005",
+    fileName: "De_Cuong_Mon_Hoc_Cloud_Computing.docx",
+    fileType: "docx",
+    fileSize: 320000, // ~312 KB
+    createdAt: "2026-09-28T07:10:00Z",
+    updatedAt: "2026-09-29T11:20:00Z",
+    owner: "nguyen.van.a@university.edu.vn",
+    status: "active",
+    s3Key: "uploads/doc-005/De_Cuong_Mon_Hoc_Cloud_Computing.docx"
+  }
+];
