@@ -8,6 +8,7 @@ const Documents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
   const [deleteId, setDeleteId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -99,12 +100,18 @@ const Documents = () => {
   const availableTypes = ["all", ...new Set(documents.map((d) => d.fileType))];
 
   // Filtering & Searching logic
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.fileName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          doc.owner.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === "all" || doc.fileType === selectedType;
-    return matchesSearch && matchesType;
-  });
+      const filteredDocuments = documents.filter((doc) => {
+      const q = searchQuery.toLowerCase();
+      const tagsStr = doc.tags ? doc.tags.join(" ") : "";
+      const matchesSearch = doc.fileName.toLowerCase().includes(q) || 
+                            doc.owner.toLowerCase().includes(q) ||
+                            (doc.category && doc.category.toLowerCase().includes(q)) ||
+                            tagsStr.toLowerCase().includes(q);
+      const matchesType = selectedType === "all" || doc.fileType === selectedType;
+      const matchesCategory = categoryFilter === "all" || doc.category === categoryFilter;
+      
+      return matchesSearch && matchesType && matchesCategory;
+    });
 
   if (loading) {
     return (
@@ -142,19 +149,36 @@ const Documents = () => {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="filter-search-container">
-        <div className="search-box-wrapper">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="search-icon">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.637 10.637Z" />
-          </svg>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Tìm kiếm theo tên tệp hoặc người sở hữu..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      <div className="filter-search-container" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', width: '100%', flexWrap: 'wrap' }}>
+            <div className="search-box-wrapper" style={{ flex: 1, minWidth: '300px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="search-icon">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.637 10.637Z" />
+              </svg>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Tìm kiếm tên, người sở hữu, danh mục, thẻ..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <select 
+              className="form-control" 
+              style={{ width: '200px', height: '42px', flexShrink: 0 }}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">Tất cả danh mục</option>
+              <option value="Other">Khác (Other)</option>
+              <option value="Work">Công việc (Work)</option>
+              <option value="Finance">Tài chính (Finance)</option>
+              <option value="HR">Nhân sự (HR)</option>
+              <option value="Technical">Kỹ thuật (Technical)</option>
+              <option value="Meeting">Cuộc họp (Meeting)</option>
+            </select>
+          </div>
 
         <div className="filter-type-list">
           {availableTypes.map((type) => (

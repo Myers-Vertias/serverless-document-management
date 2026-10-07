@@ -78,12 +78,39 @@ export const documentService = {
     return docs.filter(doc => doc.favoritedBy && doc.favoritedBy.includes(currentUser.email));
   },
 
+
+  // Update document metadata
+  updateMetadata: async (documentId, updates) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const docIndex = docs.findIndex((d) => d.documentId === documentId);
+    if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
+
+    const doc = docs[docIndex];
+    if (doc.owner !== currentUser.email) {
+      throw new Error("Chỉ chủ sở hữu mới có quyền chỉnh sửa siêu dữ liệu (metadata)!");
+    }
+
+    if (updates.category !== undefined) doc.category = updates.category;
+    if (updates.tags !== undefined) doc.tags = updates.tags;
+    if (updates.description !== undefined) doc.description = updates.description;
+    
+    doc.updatedAt = new Date().toISOString();
+
+    docs[docIndex] = doc;
+    saveDocuments(docs);
+    return doc;
+  },
+
   // Upload document
   // In future AWS, this would:
   // 1. Ask Lambda for an S3 Presigned URL (POST /documents)
   // 2. Upload file directly to S3 with that presigned URL
   // 3. Confirm upload status to DB
-  uploadDocument: async (file, description = "") => {
+  uploadDocument: async (file, description = "", category = "Other", tags = []) => {
     await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate S3 direct upload speed
 
     if (!file) {
@@ -107,7 +134,9 @@ export const documentService = {
       status: "active", // In real life, could be "processing" until Lambda triggers finish processing
       s3Key: `uploads/${docId}/${file.name}`,
       description: description,
-      favoritedBy: []
+      favoritedBy: [],
+      category: category,
+      tags: tags
     };
 
     docs.unshift(newDoc); // Add to beginning of list

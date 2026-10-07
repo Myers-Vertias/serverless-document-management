@@ -9,7 +9,9 @@ export const mockDocuments = [
     owner: "nguyen.van.a@university.edu.vn",
     status: "active",
     s3Key: "uploads/doc-001/Bao_Cao_Nghien_Cuu_AWS.pdf",
-    favoritedBy: []
+    favoritedBy: [],
+    category: "Technical",
+    tags: ["aws", "research", "cloud"]
   },
   {
     documentId: "doc-002",
@@ -21,7 +23,9 @@ export const mockDocuments = [
     owner: "tran.thi.b@university.edu.vn",
     status: "active",
     s3Key: "uploads/doc-002/Slide_Thuyet_Trinh_Giua_Ky.pptx",
-    favoritedBy: []
+    favoritedBy: [],
+    category: "Meeting",
+    tags: ["presentation", "midterm"]
   },
   {
     documentId: "doc-003",
@@ -33,7 +37,9 @@ export const mockDocuments = [
     owner: "nguyen.van.a@university.edu.vn",
     status: "active",
     s3Key: "uploads/doc-003/Danh_Sach_Sinh_Vien_Nhom_5.xlsx",
-    favoritedBy: []
+    favoritedBy: [],
+    category: "HR",
+    tags: ["students", "list"]
   },
   {
     documentId: "doc-004",
@@ -45,7 +51,9 @@ export const mockDocuments = [
     owner: "le.van.c@university.edu.vn",
     status: "processing",
     s3Key: "uploads/doc-004/Kien_Truc_He_Thong_Serverless.png",
-    favoritedBy: []
+    favoritedBy: [],
+    category: "Technical",
+    tags: ["architecture", "serverless", "diagram"]
   },
   {
     documentId: "doc-005",
@@ -57,6 +65,8 @@ export const mockDocuments = [
     owner: "nguyen.van.a@university.edu.vn",
     status: "active",
     s3Key: "uploads/doc-005/De_Cuong_Mon_Hoc_Cloud_Computing.docx",
-    favoritedBy: []
+    favoritedBy: [],
+    category: "Work",
+    tags: ["syllabus", "cloud", "course"]
   }
 ];

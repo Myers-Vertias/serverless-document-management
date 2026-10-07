@@ -7,6 +7,8 @@ const Upload = () => {
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Other");
+  const [tagsInput, setTagsInput] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -90,7 +92,14 @@ const Upload = () => {
 
     try {
       // Calls documentService upload flow
-      await documentService.uploadDocument(selectedFile, description);
+      
+      const processedTags = tagsInput.split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t)
+        .filter((t, index, self) => self.indexOf(t) === index);
+
+      await documentService.uploadDocument(selectedFile, description, category, processedTags);
+
       
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -102,6 +111,8 @@ const Upload = () => {
       // Clear input fields
       setSelectedFile(null);
       setDescription("");
+      setCategory("Other");
+      setTagsInput("");
       if (fileInputRef.current) fileInputRef.current.value = "";
 
       // Redirect after 1.5s
@@ -197,7 +208,38 @@ const Upload = () => {
               )}
             </div>
 
-            <div className="form-group margin-top-lg">
+            <div className="form-group margin-top-md">
+              <label htmlFor="category">Danh mục (Category)</label>
+              <select
+                id="category"
+                className="form-control"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                disabled={uploading}
+              >
+                <option value="Other">Khác (Other)</option>
+                <option value="Work">Công việc (Work)</option>
+                <option value="Finance">Tài chính (Finance)</option>
+                <option value="HR">Nhân sự (HR)</option>
+                <option value="Technical">Kỹ thuật (Technical)</option>
+                <option value="Meeting">Cuộc họp (Meeting)</option>
+              </select>
+            </div>
+
+            <div className="form-group margin-top-md">
+              <label htmlFor="tags">Thẻ (Tags)</label>
+              <input
+                type="text"
+                id="tags"
+                className="form-control"
+                placeholder="Nhập thẻ cách nhau bằng dấu phẩy (vd: aws, report)"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                disabled={uploading}
+              />
+            </div>
+
+            <div className="form-group margin-top-md">
               <label htmlFor="description">Mô tả tài liệu (Không bắt buộc)</label>
               <textarea
                 id="description"
