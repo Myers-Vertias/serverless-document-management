@@ -10,6 +10,7 @@ import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
 import Trash from "./pages/Trash";
+import Shared from "./pages/Shared";
 
 import "./App.css";
 
@@ -29,6 +30,7 @@ function App() {
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/trash" element={<Trash />} />
+          <Route path="/shared" element={<Shared />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 

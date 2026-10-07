@@ -16,6 +16,11 @@ const DocumentDetail = () => {
   const [editCategory, setEditCategory] = useState("Other");
   const [editTagsInput, setEditTagsInput] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState("");
   const currentUser = authService.getCurrentUser();
 
   useEffect(() => {
@@ -107,6 +112,38 @@ const DocumentDetail = () => {
     }
   };
 
+
+  const handleShare = async (e) => {
+    e.preventDefault();
+    setShareError("");
+    if (!shareEmail.trim()) {
+      setShareError("Vui lòng nhập email.");
+      return;
+    }
+    setShareLoading(true);
+    try {
+      const updatedDoc = await documentService.shareDocument(documentId, shareEmail.trim());
+      setDocument(updatedDoc);
+      setShareEmail("");
+      setShareModalOpen(false);
+    } catch (err) {
+      setShareError(err.message || "Lỗi khi chia sẻ tài liệu.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRevoke = async (email) => {
+    setActionLoading(true);
+    try {
+      const updatedDoc = await documentService.revokeShare(documentId, email);
+      setDocument(updatedDoc);
+    } catch (err) {
+      alert(err.message || "Lỗi khi thu hồi quyền.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleToggleFavorite = async () => {
     try {
@@ -256,6 +293,32 @@ const DocumentDetail = () => {
                 <span className="meta-label">Ngày cập nhật</span>
                 <span className="meta-val">{formatDate(document.updatedAt)}</span>
               </div>
+              <div className="meta-field-item">
+                <span className="meta-label">Được chia sẻ với</span>
+                <span className="meta-val">
+                    {document.sharedWith && document.sharedWith.length > 0 ? (
+                      <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
+                        {document.sharedWith.map(email => (
+                          <li key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem", padding: "0.25rem", background: "#f8fafc", borderRadius: "0.25rem", fontSize: "0.85rem" }}>
+                            <span>{email}</span>
+                            {document.owner === currentUser?.email && (
+                              <button 
+                                type="button"
+                                style={{ padding: "2px 5px", fontSize: "0.75rem", background: "none", border: "1px solid #ef4444", color: "#ef4444", borderRadius: "4px", cursor: "pointer" }}
+                                onClick={() => handleRevoke(email)}
+                                disabled={actionLoading}
+                              >
+                                Thu hồi
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="badge badge-secondary">Không có</span>
+                    )}
+                </span>
+              </div>
               <div className="meta-field-item full-width">
                 <span className="meta-label">Đường dẫn AWS S3 Key</span>
                 <span className="meta-val s3-key-val">
@@ -285,6 +348,14 @@ const DocumentDetail = () => {
           <div className="action-buttons-stack">
             {document.deletedAt === null ? (
               <>
+                {document.owner === currentUser?.email && (
+                  <button className="btn btn-secondary" onClick={() => setShareModalOpen(true)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="btn-icon">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" />
+                    </svg>
+                    Chia sẻ tài liệu
+                  </button>
+                )}
                 {document.owner === currentUser?.email && (
                   <button className="btn btn-secondary" onClick={handleEditOpen}>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="btn-icon">
@@ -337,6 +408,44 @@ const DocumentDetail = () => {
       </div>
 
       
+      {/* Share Modal */}
+      {shareModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Chia sẻ tài liệu</h3>
+              <button className="modal-close-btn" onClick={() => setShareModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleShare}>
+              <div className="modal-body">
+                {shareError && <div className="alert alert-danger">{shareError}</div>}
+                <div className="form-group">
+                  <label htmlFor="shareEmail">Email người nhận</label>
+                  <input
+                    type="email"
+                    id="shareEmail"
+                    className="form-control"
+                    placeholder="Nhập email người dùng đã đăng ký..."
+                    value={shareEmail}
+                    onChange={(e) => setShareEmail(e.target.value)}
+                    disabled={shareLoading}
+                  />
+                </div>
+                <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#64748b' }}>
+                  Lưu ý: Chỉ có thể chia sẻ với những người dùng đã có tài khoản trên hệ thống.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShareModalOpen(false)} disabled={shareLoading}>Hủy bỏ</button>
+                <button type="submit" className="btn btn-primary" disabled={shareLoading}>
+                  {shareLoading ? "Đang xử lý..." : "Chia sẻ"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Edit Metadata Modal */}
       {editModalOpen && (
         <div className="modal-overlay">

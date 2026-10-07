@@ -11,6 +11,7 @@ export const mockDocuments = [
     deletedAt: null,
     s3Key: "uploads/doc-001/Bao_Cao_Nghien_Cuu_AWS.pdf",
     favoritedBy: [],
+    sharedWith: [],
     category: "Technical",
     tags: ["aws", "research", "cloud"]
   },
@@ -26,6 +27,7 @@ export const mockDocuments = [
     deletedAt: null,
     s3Key: "uploads/doc-002/Slide_Thuyet_Trinh_Giua_Ky.pptx",
     favoritedBy: [],
+    sharedWith: [],
     category: "Meeting",
     tags: ["presentation", "midterm"]
   },
@@ -41,6 +43,7 @@ export const mockDocuments = [
     deletedAt: null,
     s3Key: "uploads/doc-003/Danh_Sach_Sinh_Vien_Nhom_5.xlsx",
     favoritedBy: [],
+    sharedWith: [],
     category: "HR",
     tags: ["students", "list"]
   },
@@ -56,6 +59,7 @@ export const mockDocuments = [
     deletedAt: null,
     s3Key: "uploads/doc-004/Kien_Truc_He_Thong_Serverless.png",
     favoritedBy: [],
+    sharedWith: [],
     category: "Technical",
     tags: ["architecture", "serverless", "diagram"]
   },
@@ -71,6 +75,7 @@ export const mockDocuments = [
     deletedAt: null,
     s3Key: "uploads/doc-005/De_Cuong_Mon_Hoc_Cloud_Computing.docx",
     favoritedBy: [],
+    sharedWith: [],
     category: "Work",
     tags: ["syllabus", "cloud", "course"]
   }

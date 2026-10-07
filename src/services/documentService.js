@@ -25,10 +25,10 @@ export const documentService = {
   // Get all documents (can filter or search if needed, but we can do it on frontend)
   getDocuments: async () => {
     await new Promise((resolve) => setTimeout(resolve, 600));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
     const docs = getStoredDocuments();
-    // In future, this will only fetch docs for current user + shared. 
-    // For now, filter active only.
-    return docs.filter(doc => doc.deletedAt === null);
+    return docs.filter(doc => doc.owner === currentUser.email && doc.deletedAt === null);
   },
 
   // Get single document by ID
@@ -39,6 +39,18 @@ export const documentService = {
     if (!doc) {
       throw new Error("Không tìm thấy tài liệu yêu cầu!");
     }
+    
+    // Check access
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+    
+    const isOwner = doc.owner === currentUser.email;
+    const isShared = doc.sharedWith && doc.sharedWith.includes(currentUser.email);
+    
+    if (!isOwner && !isShared) {
+      throw new Error("Bạn không có quyền truy cập tài liệu này!");
+    }
+    
     return doc;
   },
 
@@ -53,6 +65,14 @@ export const documentService = {
     if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
 
     const doc = docs[docIndex];
+    
+    // Check access
+    const isOwner = doc.owner === currentUser.email;
+    const isShared = doc.sharedWith && doc.sharedWith.includes(currentUser.email);
+    if (!isOwner && !isShared) {
+      throw new Error("Không có quyền thao tác trên tài liệu này!");
+    }
+
     if (!doc.favoritedBy) doc.favoritedBy = [];
 
     const userEmail = currentUser.email;
@@ -75,9 +95,12 @@ export const documentService = {
     if (!currentUser) throw new Error("Chưa đăng nhập!");
 
     const docs = getStoredDocuments();
-    // Filter docs where currentUser's email is in favoritedBy and doc is not in trash
-    // (Trash logic is not implemented yet, so we assume all are active for now)
-    return docs.filter(doc => doc.favoritedBy && doc.favoritedBy.includes(currentUser.email) && doc.deletedAt === null);
+    return docs.filter(doc => {
+      const isOwner = doc.owner === currentUser.email;
+      const isShared = doc.sharedWith && doc.sharedWith.includes(currentUser.email);
+      const isFavorited = doc.favoritedBy && doc.favoritedBy.includes(currentUser.email);
+      return isFavorited && doc.deletedAt === null && (isOwner || isShared);
+    });
   },
 
 
@@ -105,6 +128,68 @@ export const documentService = {
     docs[docIndex] = doc;
     saveDocuments(docs);
     return doc;
+  },
+
+  // Sharing methods
+  shareDocument: async (documentId, targetEmail) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const docIndex = docs.findIndex((d) => d.documentId === documentId);
+    if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
+
+    const doc = docs[docIndex];
+    if (doc.owner !== currentUser.email) throw new Error("Chỉ chủ sở hữu mới có quyền chia sẻ!");
+    
+    targetEmail = targetEmail.toLowerCase();
+    if (doc.owner === targetEmail) throw new Error("Không thể tự chia sẻ cho chính mình!");
+
+    const userExists = await authService.checkUserExists(targetEmail);
+    if (!userExists) throw new Error("Tài khoản không tồn tại trong hệ thống.");
+
+    if (!doc.sharedWith) doc.sharedWith = [];
+    if (doc.sharedWith.includes(targetEmail)) throw new Error("Tài liệu đã được chia sẻ với người này!");
+
+    doc.sharedWith.push(targetEmail);
+    docs[docIndex] = doc;
+    saveDocuments(docs);
+    return doc;
+  },
+
+  revokeShare: async (documentId, targetEmail) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    const docIndex = docs.findIndex((d) => d.documentId === documentId);
+    if (docIndex === -1) throw new Error("Không tìm thấy tài liệu!");
+
+    const doc = docs[docIndex];
+    if (doc.owner !== currentUser.email) throw new Error("Chỉ chủ sở hữu mới có quyền thu hồi chia sẻ!");
+
+    if (!doc.sharedWith) return doc;
+    
+    doc.sharedWith = doc.sharedWith.filter(e => e !== targetEmail.toLowerCase());
+    docs[docIndex] = doc;
+    saveDocuments(docs);
+    return doc;
+  },
+
+  getSharedDocuments: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+
+    const docs = getStoredDocuments();
+    return docs.filter(doc => 
+      doc.sharedWith && 
+      doc.sharedWith.includes(currentUser.email) && 
+      doc.deletedAt === null && 
+      doc.owner !== currentUser.email
+    );
   },
 
   // Upload document
@@ -139,7 +224,8 @@ export const documentService = {
       favoritedBy: [],
       category: category,
       tags: tags,
-      deletedAt: null
+      deletedAt: null,
+      sharedWith: []
     };
 
     docs.unshift(newDoc); // Add to beginning of list
@@ -215,6 +301,15 @@ export const documentService = {
   // Mock download file
   downloadDocument: async (doc) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
+    
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) throw new Error("Chưa đăng nhập!");
+    
+    const isOwner = doc.owner === currentUser.email;
+    const isShared = doc.sharedWith && doc.sharedWith.includes(currentUser.email);
+    if (!isOwner && !isShared) {
+      throw new Error("Không có quyền tải xuống tài liệu này!");
+    }
     
     // Create a mock download action by building a dummy text content and triggering file download
     const element = document.createElement("a");

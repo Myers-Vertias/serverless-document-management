@@ -103,5 +103,11 @@ export const authService = {
 
   isAuthenticated: () => {
     return localStorage.getItem(CURRENT_USER_KEY) !== null;
+  },
+
+  checkUserExists: async (email) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const users = getMockUsers();
+    return users.some(u => u.email.toLowerCase() === email.toLowerCase());
   }
 };
