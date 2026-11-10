@@ -1,8 +1,11 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 const Navbar = ({ onToggleSidebar }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
 
@@ -11,7 +14,7 @@ const Navbar = ({ onToggleSidebar }) => {
       await authService.logout();
       navigate("/login");
     } catch (err) {
-      console.error("Lỗi đăng xuất:", err);
+      console.error("Logout error:", err);
     }
   };
 
@@ -35,17 +38,18 @@ const Navbar = ({ onToggleSidebar }) => {
         </Link>
       </div>
 
-      <div className="navbar-right">
+      <div className="navbar-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <LanguageSwitcher />
         {currentUser && (
           <div className="user-profile-widget">
             <div className="user-info">
               <span className="user-name">{currentUser.name}</span>
-              <span className="user-role">{currentUser.role === 'admin' ? 'Quản trị viên' : 'Sinh viên'}</span>
+              <span className="user-role">{currentUser.role === "admin" ? "Admin" : "Student"}</span>
             </div>
             <div className="user-avatar">
               {currentUser.name.charAt(0).toUpperCase()}
             </div>
-            <button className="logout-btn" onClick={handleLogout} title="Đăng xuất">
+            <button className="logout-btn" onClick={handleLogout} title={t("navigation.logout")}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
               </svg>

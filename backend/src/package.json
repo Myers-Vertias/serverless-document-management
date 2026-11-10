@@ -1,0 +1,7 @@
+{
+  "name": "dms-serverless-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AWS SAM Lambda handlers for the document management workshop"
+}

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n/config";
 import { documentService } from "../services/documentService";
 import { authService } from "../services/authService";
 
 const DocumentDetail = () => {
+  const { t } = useTranslation();
   const { documentId } = useParams();
   const navigate = useNavigate();
   const [document, setDocument] = useState(null);
@@ -29,7 +32,7 @@ const DocumentDetail = () => {
         const data = await documentService.getDocumentById(documentId);
         setDocument(data);
       } catch (err) {
-        setError(err.message || "Không thể tìm thấy tài liệu này!");
+        setError(err.message || t("errors.notFound"));
       } finally {
         setLoading(false);
       }
@@ -43,7 +46,7 @@ const DocumentDetail = () => {
       await documentService.downloadDocument(document);
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi tải tài liệu!");
+      alert(t("errors.default"));
     }
   };
 
@@ -53,7 +56,7 @@ const DocumentDetail = () => {
       await documentService.moveToTrash(documentId);
       navigate("/documents");
     } catch (err) {
-      alert(err.message || "Không thể đưa vào thùng rác!");
+      alert(err.message || t("errors.default"));
       setActionLoading(false);
     }
   };
@@ -64,7 +67,7 @@ const DocumentDetail = () => {
       const updatedDoc = await documentService.restoreFromTrash(documentId);
       setDocument(updatedDoc);
     } catch (err) {
-      alert(err.message || "Không thể khôi phục tài liệu!");
+      alert(err.message || t("errors.default"));
     } finally {
       setActionLoading(false);
     }
@@ -76,7 +79,7 @@ const DocumentDetail = () => {
       await documentService.permanentlyDelete(documentId);
       navigate("/trash");
     } catch (err) {
-      alert(err.message || "Không thể xóa vĩnh viễn tài liệu!");
+      alert(err.message || t("errors.default"));
       setActionLoading(false);
     }
   };
@@ -106,7 +109,7 @@ const DocumentDetail = () => {
       setEditModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert(err.message || "Lỗi khi cập nhật metadata!");
+      alert(err.message || t("errors.default"));
     } finally {
       setActionLoading(false);
     }
@@ -117,7 +120,7 @@ const DocumentDetail = () => {
     e.preventDefault();
     setShareError("");
     if (!shareEmail.trim()) {
-      setShareError("Vui lòng nhập email.");
+      setShareError(t("errors.requireEmail"));
       return;
     }
     setShareLoading(true);
@@ -127,7 +130,7 @@ const DocumentDetail = () => {
       setShareEmail("");
       setShareModalOpen(false);
     } catch (err) {
-      setShareError(err.message || "Lỗi khi chia sẻ tài liệu.");
+      setShareError(err.message || t("errors.default"));
     } finally {
       setShareLoading(false);
     }
@@ -139,7 +142,7 @@ const DocumentDetail = () => {
       const updatedDoc = await documentService.revokeShare(documentId, email);
       setDocument(updatedDoc);
     } catch (err) {
-      alert(err.message || "Lỗi khi thu hồi quyền.");
+      alert(err.message || t("errors.default"));
     } finally {
       setActionLoading(false);
     }
@@ -148,14 +151,14 @@ const DocumentDetail = () => {
   const handleToggleFavorite = async () => {
     try {
       if (document.deletedAt !== null) {
-        alert("Không thể thao tác với tài liệu trong thùng rác!");
+        alert(t("detail.inTrashWarning"));
         return;
       }
       const updatedDoc = await documentService.toggleFavorite(documentId);
       setDocument(updatedDoc);
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi cập nhật mục yêu thích!");
+      alert(t("errors.default"));
     }
   };
 
@@ -169,7 +172,7 @@ const DocumentDetail = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString("vi-VN", {
+    return new Date(dateString).toLocaleString(i18n.language === "vi" ? "vi-VN" : "en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -183,7 +186,7 @@ const DocumentDetail = () => {
     return (
       <div className="loading-wrapper">
         <div className="spinner"></div>
-        <p>Đang tải thông tin chi tiết tài liệu...</p>
+        <p>{t("detail.loading")}</p>
       </div>
     );
   }
@@ -195,9 +198,9 @@ const DocumentDetail = () => {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="error-icon">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
           </svg>
-          <h2>Không tìm thấy tệp tin!</h2>
-          <p>{error || "Yêu cầu tệp không hợp lệ hoặc đã bị xóa."}</p>
-          <Link to="/documents" className="btn btn-primary">Quay lại danh sách</Link>
+          <h2>{t("errors.notFound")}</h2>
+          <p>{error || t("errors.notFound")}</p>
+          <Link to="/documents" className="btn btn-primary">{t("detail.backToList")}</Link>
         </div>
       </div>
     );
@@ -207,7 +210,7 @@ const DocumentDetail = () => {
     <div className="document-detail-page">
       {/* Navigation Breadcrumb */}
       <div className="breadcrumb">
-        <Link to="/documents">Kho tài liệu</Link>
+        <Link to="/documents">{t("documents.title")}</Link>
         <span className="separator">/</span>
         <span className="current">{document.fileName}</span>
       </div>
@@ -222,10 +225,10 @@ const DocumentDetail = () => {
               </div>
               <div className="header-info">
                 <h2>{document.fileName}</h2>
-                <p className="doc-id">Mã tài liệu: {document.documentId}</p>
+                <p className="doc-id">ID: {document.documentId}</p>
               </div>
             </div>
-            <button className="btn-icon-action" onClick={handleToggleFavorite} title="Yêu thích" style={{ padding: "0.5rem", background: "transparent", border: "none", cursor: "pointer", color: "#eab308" }}>
+            <button className="btn-icon-action" onClick={handleToggleFavorite} title={t("documents.favorite")} style={{ padding: "0.5rem", background: "transparent", border: "none", cursor: "pointer", color: "#eab308" }}>
               {document.favoritedBy?.includes(authService.getCurrentUser()?.email) ? (
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
                   <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
@@ -239,68 +242,56 @@ const DocumentDetail = () => {
           </div>
 
           <div className="detail-body-section">
-            <h3 className="section-title">Siêu dữ liệu chi tiết (DynamoDB Fields)</h3>
+            <h3 className="section-title">{t("detail.metaTitle")}</h3>
             <div className="meta-fields-grid">
               <div className="meta-field-item">
-                <span className="meta-label">Tên tệp tin gốc</span>
+                <span className="meta-label">{t("detail.fileName")}</span>
                 <span className="meta-val">{document.fileName}</span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Định dạng tệp</span>
+                <span className="meta-label">{t("detail.fileType")}</span>
                 <span className="meta-val-badge">
                   <span className={`badge badge-file-${document.fileType}`}>{document.fileType.toUpperCase()}</span>
                 </span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Kích thước tệp</span>
+                <span className="meta-label">{t("detail.fileSize")}</span>
                 <span className="meta-val">{formatBytes(document.fileSize)} ({document.fileSize.toLocaleString()} bytes)</span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Danh mục (Category)</span>
+                <span className="meta-label">{t("detail.category")}</span>
                 <span className="meta-val">
-                  <span className="badge badge-outline">{document.category || "Other"}</span>
+                  <span className="badge badge-outline">{t(`categories.${(document.category || "other").toLowerCase()}`)}</span>
                 </span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Thẻ (Tags)</span>
-                <span className="meta-val">
-                  {document.tags && document.tags.length > 0 
-                    ? document.tags.map(t => <span key={t} className="badge badge-tag" style={{marginRight: '4px', background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem'}}>{t}</span>) 
-                    : <span className="text-muted">Không có thẻ</span>}
-                </span>
-              </div>
-              <div className="meta-field-item">
-                <span className="meta-label">Danh mục</span>
-                <span className="meta-val">{document.category || "N/A"}</span>
-              </div>
-              <div className="meta-field-item">
-                <span className="meta-label">Thẻ (Tags)</span>
+                <span className="meta-label">{t("detail.tags")}</span>
                 <span className="meta-val">
                   {document.tags && document.tags.length > 0 
                     ? document.tags.map(t => <span key={t} className="badge badge-tag" style={{marginRight: '4px', background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem'}}>{t}</span>) 
-                    : "N/A"}
+                    : <span className="text-muted">{t("detail.noTags")}</span>}
                 </span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Người sở hữu (Owner)</span>
+                <span className="meta-label">{t("detail.owner")}</span>
                 <span className="meta-val">{document.owner}</span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Ngày khởi tạo</span>
+                <span className="meta-label">{t("detail.createdAt")}</span>
                 <span className="meta-val">{formatDate(document.createdAt)}</span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Ngày cập nhật</span>
+                <span className="meta-label">{t("detail.updatedAt")}</span>
                 <span className="meta-val">{formatDate(document.updatedAt)}</span>
               </div>
               <div className="meta-field-item">
-                <span className="meta-label">Được chia sẻ với</span>
+                <span className="meta-label">{t("detail.sharedWith")}</span>
                 <span className="meta-val">
                     {document.sharedWith && document.sharedWith.length > 0 ? (
                       <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
                         {document.sharedWith.map(email => (
-                          <li key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem", padding: "0.25rem", background: "#f8fafc", borderRadius: "0.25rem", fontSize: "0.85rem" }}>
-                            <span>{email}</span>
+                          <li key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem", padding: "0.25rem", background: "transparent", color: "inherit", borderRadius: "0.25rem", fontSize: "0.85rem" }}>
+                            <span style={{ color: "inherit" }}>{email}</span>
                             {document.owner === currentUser?.email && (
                               <button 
                                 type="button"
@@ -308,26 +299,26 @@ const DocumentDetail = () => {
                                 onClick={() => handleRevoke(email)}
                                 disabled={actionLoading}
                               >
-                                Thu hồi
+                                {t("detail.revoke")}
                               </button>
                             )}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <span className="badge badge-secondary">Không có</span>
+                      <span className="badge badge-secondary">{t("detail.noShared")}</span>
                     )}
                 </span>
               </div>
               <div className="meta-field-item full-width">
-                <span className="meta-label">Đường dẫn AWS S3 Key</span>
+                <span className="meta-label">{t("detail.s3Key")}</span>
                 <span className="meta-val s3-key-val">
                   <code>s3://{import.meta.env.VITE_S3_BUCKET_NAME || "uni-document-bucket-prod"}/{document.s3Key}</code>
                 </span>
               </div>
               {document.description && (
                 <div className="meta-field-item full-width">
-                  <span className="meta-label">Mô tả tài liệu</span>
+                  <span className="meta-label">{t("detail.description")}</span>
                   <span className="meta-val desc-val">{document.description}</span>
                 </div>
               )}
@@ -337,12 +328,12 @@ const DocumentDetail = () => {
 
         {/* Sidebar Actions Card */}
         <div className="card actions-sidebar-card">
-          <h3>Thao tác tài liệu</h3>
-          <p className="actions-hint">Nhấp vào bên dưới để thao tác trực tiếp với tài nguyên cloud.</p>
+          <h3>{t("detail.actionsTitle")}</h3>
+          <p className="actions-hint">{t("detail.actionsHint")}</p>
           
                     {document.deletedAt ? (
             <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
-              <strong>Tài liệu này đang trong Thùng rác.</strong> Không thể xem chi tiết hoặc tải xuống cho đến khi được khôi phục.
+              <strong>{t("detail.inTrashWarning")}</strong>
             </div>
           ) : null}
           <div className="action-buttons-stack">
@@ -353,7 +344,7 @@ const DocumentDetail = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="btn-icon">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z" />
                     </svg>
-                    Chia sẻ tài liệu
+                    {t("detail.share")}
                   </button>
                 )}
                 {document.owner === currentUser?.email && (
@@ -361,18 +352,18 @@ const DocumentDetail = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="btn-icon">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                     </svg>
-                    Sửa Metadata
+                    {t("detail.editMeta")}
                   </button>
                 )}
                 <button className="btn btn-primary" onClick={handleDownload}>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="btn-icon">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                   </svg>
-                  Tải xuống (S3 Presigned)
+                  {t("detail.download")}
                 </button>
                 {document.owner === currentUser?.email && (
                   <button className="btn btn-danger-outline" onClick={() => setTrashModalOpen(true)}>
-                    Đưa vào thùng rác
+                    {t("detail.moveToTrash")}
                   </button>
                 )}
               </>
@@ -381,17 +372,17 @@ const DocumentDetail = () => {
                 {document.owner === currentUser?.email && (
                   <>
                     <button className="btn btn-primary" onClick={handleRestore} disabled={actionLoading}>
-                      Khôi phục tài liệu
+                      {t("detail.restore")}
                     </button>
                     <button className="btn btn-danger-outline" onClick={() => setDeleteModalOpen(true)}>
-                      Xóa vĩnh viễn
+                      {t("detail.permanentDelete")}
                     </button>
                   </>
                 )}
               </>
             )}
             <Link to="/documents" className="btn btn-secondary-outline text-center">
-              Quay lại danh sách
+              {t("detail.backToList")}
             </Link>
           </div>
 
@@ -400,8 +391,8 @@ const DocumentDetail = () => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
             </svg>
             <div>
-              <strong>Liên kết an toàn</strong>
-              <p>Mọi yêu cầu tải tệp đều sử dụng chữ ký điện tử AWS Signature Version 4 để ngăn chặn truy cập trái phép.</p>
+              <strong>{t("detail.secureLink")}</strong>
+              <p>{t("detail.secureLinkDesc")}</p>
             </div>
           </div>
         </div>
@@ -413,32 +404,32 @@ const DocumentDetail = () => {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: '400px' }}>
             <div className="modal-header">
-              <h3>Chia sẻ tài liệu</h3>
+              <h3>{t("detail.shareModalTitle")}</h3>
               <button className="modal-close-btn" onClick={() => setShareModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleShare}>
               <div className="modal-body">
                 {shareError && <div className="alert alert-danger">{shareError}</div>}
                 <div className="form-group">
-                  <label htmlFor="shareEmail">Email người nhận</label>
+                  <label htmlFor="shareEmail">{t("detail.shareEmailLabel")}</label>
                   <input
                     type="email"
                     id="shareEmail"
                     className="form-control"
-                    placeholder="Nhập email người dùng đã đăng ký..."
+                    placeholder={t("detail.shareEmailPlaceholder")}
                     value={shareEmail}
                     onChange={(e) => setShareEmail(e.target.value)}
                     disabled={shareLoading}
                   />
                 </div>
                 <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#64748b' }}>
-                  Lưu ý: Chỉ có thể chia sẻ với những người dùng đã có tài khoản trên hệ thống.
+                  {t("detail.shareHint")}
                 </p>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShareModalOpen(false)} disabled={shareLoading}>Hủy bỏ</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShareModalOpen(false)} disabled={shareLoading}>{t("detail.cancel")}</button>
                 <button type="submit" className="btn btn-primary" disabled={shareLoading}>
-                  {shareLoading ? "Đang xử lý..." : "Chia sẻ"}
+                  {shareLoading ? t("detail.sharingBtn") : t("detail.shareBtn")}
                 </button>
               </div>
             </form>
@@ -451,13 +442,13 @@ const DocumentDetail = () => {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: '500px' }}>
             <div className="modal-header">
-              <h3>Chỉnh sửa siêu dữ liệu</h3>
+              <h3>{t("detail.editModalTitle")}</h3>
               <button className="modal-close-btn" onClick={() => setEditModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label htmlFor="editCategory">Danh mục</label>
+                  <label htmlFor="editCategory">{t("detail.category")}</label>
                   <select
                     id="editCategory"
                     className="form-control"
@@ -465,28 +456,28 @@ const DocumentDetail = () => {
                     onChange={(e) => setEditCategory(e.target.value)}
                     disabled={actionLoading}
                   >
-                    <option value="Other">Khác (Other)</option>
-                    <option value="Work">Công việc (Work)</option>
-                    <option value="Finance">Tài chính (Finance)</option>
-                    <option value="HR">Nhân sự (HR)</option>
-                    <option value="Technical">Kỹ thuật (Technical)</option>
-                    <option value="Meeting">Cuộc họp (Meeting)</option>
+                    <option value="Other">{t("categories.other")}</option>
+                    <option value="Work">{t("categories.work")}</option>
+                    <option value="Finance">{t("categories.finance")}</option>
+                    <option value="HR">{t("categories.hr")}</option>
+                    <option value="Technical">{t("categories.technical")}</option>
+                    <option value="Meeting">{t("categories.meeting")}</option>
                   </select>
                 </div>
                 <div className="form-group margin-top-md">
-                  <label htmlFor="editTags">Thẻ (Tags)</label>
+                  <label htmlFor="editTags">{t("detail.tags")}</label>
                   <input
                     type="text"
                     id="editTags"
                     className="form-control"
-                    placeholder="Nhập thẻ cách nhau bởi dấu phẩy"
+                    placeholder={t("upload.tagsPlaceholder")}
                     value={editTagsInput}
                     onChange={(e) => setEditTagsInput(e.target.value)}
                     disabled={actionLoading}
                   />
                 </div>
                 <div className="form-group margin-top-md">
-                  <label htmlFor="editDescription">Mô tả tài liệu</label>
+                  <label htmlFor="editDescription">{t("detail.description")}</label>
                   <textarea
                     id="editDescription"
                     className="form-control"
@@ -504,14 +495,14 @@ const DocumentDetail = () => {
                   onClick={() => setEditModalOpen(false)}
                   disabled={actionLoading}
                 >
-                  Hủy bỏ
+                  {t("detail.cancel")}
                 </button>
                 <button 
                   type="submit"
                   className="btn btn-primary" 
                   disabled={actionLoading}
                 >
-                  {actionLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                  {actionLoading ? t("detail.saving") : t("detail.save")}
                 </button>
               </div>
             </form>
@@ -524,15 +515,15 @@ const DocumentDetail = () => {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>Đưa vào thùng rác</h3>
+              <h3>{t("detail.trashConfirmTitle")}</h3>
               <button className="modal-close-btn" onClick={() => setTrashModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <p>Bạn có chắc muốn đưa tài liệu <strong>{document.fileName}</strong> vào Thùng rác không?</p>
+              <p>{t("detail.trashConfirmMsg").replace("{{name}}", document.fileName)}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setTrashModalOpen(false)} disabled={actionLoading}>Hủy bỏ</button>
-              <button className="btn btn-danger" onClick={handleMoveToTrash} disabled={actionLoading}>Đưa vào Thùng rác</button>
+              <button className="btn btn-secondary" onClick={() => setTrashModalOpen(false)} disabled={actionLoading}>{t("detail.cancel")}</button>
+              <button className="btn btn-danger" onClick={handleMoveToTrash} disabled={actionLoading}>{t("detail.moveToTrash")}</button>
             </div>
           </div>
         </div>
@@ -543,16 +534,16 @@ const DocumentDetail = () => {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>Xác nhận xóa vĩnh viễn</h3>
+              <h3>{t("detail.deleteConfirmTitle")}</h3>
               <button className="modal-close-btn" onClick={() => setDeleteModalOpen(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <p>Bạn có chắc chắn muốn xóa vĩnh viễn tệp <strong>{document.fileName}</strong>?</p>
-              <p className="delete-warning">Thao tác này không thể hoàn tác. Tài liệu sẽ bị xóa hoàn toàn khỏi hệ thống.</p>
+              <p>{t("detail.deleteConfirmMsg").replace("{{name}}", document.fileName)}</p>
+              <p className="delete-warning">{t("detail.deleteWarning")}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)} disabled={actionLoading}>Hủy bỏ</button>
-              <button className="btn btn-danger" onClick={handleDeletePermanently} disabled={actionLoading}>Xác nhận xóa vĩnh viễn</button>
+              <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)} disabled={actionLoading}>{t("detail.cancel")}</button>
+              <button className="btn btn-danger" onClick={handleDeletePermanently} disabled={actionLoading}>{t("detail.permanentDelete")}</button>
             </div>
           </div>
         </div>

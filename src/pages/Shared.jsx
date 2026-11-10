@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n/config";
 import { documentService } from "../services/documentService";
 import { authService } from "../services/authService";
 
 const Shared = () => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,7 +21,7 @@ const Shared = () => {
       const data = await documentService.getSharedDocuments();
       setDocuments(data);
     } catch (err) {
-      setError("Không thể tải danh sách được chia sẻ!");
+      setError(t("errors.loadSharedFailed"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -32,10 +35,10 @@ const Shared = () => {
   const handleDownload = async (doc) => {
     try {
       await documentService.downloadDocument(doc);
-      showFeedback("success", `Đã giả lập tải xuống tệp: ${doc.fileName}`);
+      showFeedback("success", t("documents.downloadSuccess", { name: doc.fileName }));
     } catch (err) {
       console.error(err);
-      showFeedback("error", "Lỗi khi tải xuống tài liệu!");
+      showFeedback("error", t("errors.downloadFailed"));
     }
   };
 
@@ -47,7 +50,7 @@ const Shared = () => {
       );
     } catch (err) {
       console.error(err);
-      showFeedback("error", err.message || "Lỗi khi cập nhật mục yêu thích!");
+      showFeedback("error", t(err.message) || t("errors.updateFavoriteFailed"));
     }
   };
 
@@ -66,7 +69,7 @@ const Shared = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
+    return new Date(dateString).toLocaleDateString(i18n.language === "vi" ? "vi-VN" : "en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -94,7 +97,7 @@ const Shared = () => {
     return (
       <div className="loading-wrapper">
         <div className="spinner"></div>
-        <p>Đang tải danh sách được chia sẻ...</p>
+        <p>{t("shared.loading")}</p>
       </div>
     );
   }
@@ -102,14 +105,14 @@ const Shared = () => {
   return (
     <div className="documents-page">
       <div className="page-header">
-        <h1>Chia sẻ với tôi</h1>
-        <p className="subtitle">Danh sách tài liệu mà người khác đã chia sẻ cho bạn.</p>
+        <h1>{t("shared.title")}</h1>
+        <p className="subtitle">{t("shared.desc")}</p>
       </div>
 
       {error ? (
         <div className="error-container">
           <p>{error}</p>
-          <button className="btn btn-primary" onClick={loadDocuments}>Thử lại</button>
+          <button className="btn btn-primary" onClick={loadDocuments}>{t("actions.retry")}</button>
         </div>
       ) : (
         <>
@@ -128,7 +131,7 @@ const Shared = () => {
                 <input
                   type="text"
                   className="search-input"
-                  placeholder="Tìm kiếm tên, người sở hữu, danh mục, thẻ..."
+                  placeholder={t("documents.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -140,13 +143,13 @@ const Shared = () => {
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
               >
-                <option value="all">Tất cả danh mục</option>
-                <option value="Other">Khác (Other)</option>
-                <option value="Work">Công việc (Work)</option>
-                <option value="Finance">Tài chính (Finance)</option>
-                <option value="HR">Nhân sự (HR)</option>
-                <option value="Technical">Kỹ thuật (Technical)</option>
-                <option value="Meeting">Cuộc họp (Meeting)</option>
+                <option value="all">{t("documents.allCategories")}</option>
+                <option value="Other">{t("categories.other")}</option>
+                <option value="Work">{t("categories.work")}</option>
+                <option value="Finance">{t("categories.finance")}</option>
+                <option value="HR">{t("categories.hr")}</option>
+                <option value="Technical">{t("categories.technical")}</option>
+                <option value="Meeting">{t("categories.meeting")}</option>
               </select>
             </div>
 
@@ -157,7 +160,7 @@ const Shared = () => {
                   className={`filter-btn ${selectedType === type ? "active" : ""}`}
                   onClick={() => setSelectedType(type)}
                 >
-                  {type === "all" ? "Tất cả" : type.toUpperCase()}
+                  {type === "all" ? t("documents.allTypes") : type.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -168,8 +171,8 @@ const Shared = () => {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="empty-icon">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
-              <h3>Không tìm thấy tài liệu chia sẻ</h3>
-              <p>Chưa có ai chia sẻ tài liệu cho bạn hoặc không tìm thấy tài liệu phù hợp.</p>
+              <h3>{t("shared.emptyState")}</h3>
+              <p>{t("documents.noResults")}</p>
               <button 
                 className="btn btn-secondary btn-sm"
                 onClick={() => {
@@ -178,7 +181,7 @@ const Shared = () => {
                   setCategoryFilter("all");
                 }}
               >
-                Xóa bộ lọc
+                {t("actions.clearFilter")}
               </button>
             </div>
           ) : (
@@ -187,12 +190,12 @@ const Shared = () => {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Tên tệp</th>
-                      <th>Loại</th>
-                      <th>Kích thước</th>
-                      <th>Người chia sẻ</th>
-                      <th>Ngày chia sẻ</th>
-                      <th className="text-right">Hành động</th>
+                      <th>{t("documents.fileName")}</th>
+                      <th>{t("detail.fileType")}</th>
+                      <th>{t("documents.size")}</th>
+                      <th>{t("detail.owner")}</th>
+                      <th>{t("detail.updatedAt")}</th>
+                      <th className="text-right">{t("documents.actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -219,7 +222,7 @@ const Shared = () => {
                             <button 
                               className="btn-icon-action" 
                               onClick={() => handleToggleFavorite(doc)}
-                              title={isFavorited ? "Bỏ yêu thích" : "Yêu thích"}
+                              title={isFavorited ? t("documents.unfavorite") : t("documents.favorite")}
                             >
                               {isFavorited ? (
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="icon-sm text-warning" style={{ color: '#f59e0b' }}>
@@ -231,7 +234,7 @@ const Shared = () => {
                                 </svg>
                               )}
                             </button>
-                            <Link to={`/documents/${doc.documentId}`} className="btn-icon-action" title="Xem chi tiết">
+                            <Link to={`/documents/${doc.documentId}`} className="btn-icon-action" title={t("detail.title")}>
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon-sm">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -240,7 +243,7 @@ const Shared = () => {
                             <button 
                               className="btn-icon-action" 
                               onClick={() => handleDownload(doc)}
-                              title="Tải xuống tài liệu"
+                              title={t("documents.download")}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon-sm">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />

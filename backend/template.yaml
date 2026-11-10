@@ -1,0 +1,267 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless document management workshop backend (development scaffold)
+
+Parameters:
+  LambdaExecutionRoleArn:
+    Type: String
+    Description: ARN of the pre-created dms-lambda-execution role
+    AllowedPattern: '^arn:aws:iam::[0-9]{12}:role/.+$'
+    ConstraintDescription: Provide the ARN of the dedicated Lambda execution role.
+  AllowedFrontendOrigins:
+    Type: CommaDelimitedList
+    Default: http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
+    Description: Browser origins allowed to call the API and upload/download from S3.
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Handler: index.handler
+    CodeUri: src/
+    Timeout: 10
+    MemorySize: 256
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        DOCUMENTS_TABLE: !Ref DocumentsTable
+        SHARES_TABLE: !Ref SharesTable
+        FAVORITES_TABLE: !Ref FavoritesTable
+        DOCUMENTS_BUCKET: !Ref DocumentsBucket
+        USER_POOL_ID: !Ref DmsUserPool
+
+Resources:
+  DmsUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-users'
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  DmsUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${AWS::StackName}-web'
+      UserPoolId: !Ref DmsUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+
+  DocumentsApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedFrontendOrigins
+        AllowHeaders:
+          - Authorization
+          - Content-Type
+        AllowMethods:
+          - GET
+          - POST
+          - PATCH
+          - PUT
+          - DELETE
+          - OPTIONS
+        MaxAge: 600
+      Auth:
+        DefaultAuthorizer: CognitoJwtAuthorizer
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: '$request.header.Authorization'
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${DmsUserPool}'
+              audience:
+                - !Ref DmsUserPoolClient
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-health'
+      Role: !Ref LambdaExecutionRoleArn
+      Description: Minimal unauthenticated health endpoint for deployment smoke checks.
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DocumentsApi
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: NONE
+
+  DocumentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-documents'
+      Role: !Ref LambdaExecutionRoleArn
+      Description: Authenticated document metadata, sharing, favorites, and S3 URL API.
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DocumentsApi
+            Path: /{proxy+}
+            Method: ANY
+        CorsPreflight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref DocumentsApi
+            Path: /{proxy+}
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
+
+  DocumentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-documents'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: documentId
+          AttributeType: S
+        - AttributeName: ownerSub
+          AttributeType: S
+        - AttributeName: createdAtDocumentId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: documentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: OwnerIndex
+          KeySchema:
+            - AttributeName: ownerSub
+              KeyType: HASH
+            - AttributeName: createdAtDocumentId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  SharesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-shares'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: recipientSub
+          AttributeType: S
+        - AttributeName: documentId
+          AttributeType: S
+        - AttributeName: ownerSub
+          AttributeType: S
+        - AttributeName: documentIdRecipientSub
+          AttributeType: S
+      KeySchema:
+        - AttributeName: recipientSub
+          KeyType: HASH
+        - AttributeName: documentId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: OwnerShareIndex
+          KeySchema:
+            - AttributeName: ownerSub
+              KeyType: HASH
+            - AttributeName: documentIdRecipientSub
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  FavoritesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-favorites'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userSub
+          AttributeType: S
+        - AttributeName: documentId
+          AttributeType: S
+        - AttributeName: documentIdUserSub
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userSub
+          KeyType: HASH
+        - AttributeName: documentId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: DocumentFavoritesIndex
+          KeySchema:
+            - AttributeName: documentId
+              KeyType: HASH
+            - AttributeName: documentIdUserSub
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: !Ref AllowedFrontendOrigins
+            AllowedMethods:
+              - GET
+              - HEAD
+              - PUT
+            AllowedHeaders:
+              - Authorization
+              - Content-Type
+              - X-Amz-Date
+              - X-Amz-Content-Sha256
+              - X-Amz-Security-Token
+              - x-amz-meta-document-id
+            ExposedHeaders:
+              - ETag
+            MaxAge: 600
+
+Outputs:
+  ApiBaseUrl:
+    Description: Base URL for the default HTTP API stage
+    Value: !Sub 'https://${DocumentsApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref DmsUserPool
+  UserPoolClientId:
+    Description: Public Cognito app client ID for the web frontend
+    Value: !Ref DmsUserPoolClient
+  DocumentsTableName:
+    Value: !Ref DocumentsTable
+  SharesTableName:
+    Value: !Ref SharesTable
+  FavoritesTableName:
+    Value: !Ref FavoritesTable
+  DocumentsBucketName:
+    Value: !Ref DocumentsBucket

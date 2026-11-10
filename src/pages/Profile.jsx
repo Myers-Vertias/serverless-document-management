@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import { useTranslation } from "react-i18next";
 import { documentService } from "../services/documentService";
 
 const Profile = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
   const [docCount, setDocCount] = useState(0);
@@ -17,7 +19,7 @@ const Profile = () => {
         const userDocs = docs.filter(d => d.owner === currentUser?.email);
         setDocCount(userDocs.length);
       } catch (err) {
-        console.error("Lỗi lấy thông tin thống kê:", err);
+        console.error("Stats error:", err);
       } finally {
         setLoading(false);
       }
@@ -32,19 +34,17 @@ const Profile = () => {
       await authService.logout();
       navigate("/login");
     } catch (err) {
-      console.error("Lỗi đăng xuất:", err);
+      console.error("Logout error:", err);
     }
   };
-
-  const tokenExp = React.useMemo(() => Math.floor(Date.now() / 1000) + 3600, []);
 
   if (!currentUser) return null;
 
   return (
     <div className="profile-page">
       <div className="page-header">
-        <h1>Hồ sơ cá nhân</h1>
-        <p className="subtitle">Thông tin tài khoản sinh viên/giảng viên được xác thực bởi Amazon Cognito.</p>
+        <h1>{t("profile.title")}</h1>
+        <p className="subtitle">{t("profile.subtitle")}</p>
       </div>
 
       <div className="profile-grid">
@@ -55,65 +55,55 @@ const Profile = () => {
           </div>
           <h2>{currentUser.name}</h2>
           <span className={`badge badge-role-${currentUser.role}`}>
-            {currentUser.role === "admin" ? "Quản trị viên hệ thống" : "Sinh viên / Người dùng"}
+            {currentUser.role === "admin" ? t("profile.roleAdmin") : t("profile.roleUser")}
           </span>
 
           <div className="profile-details-list">
             <div className="detail-row">
-              <span className="detail-label">Địa chỉ email</span>
+              <span className="detail-label">{t("profile.email")}</span>
               <span className="detail-val">{currentUser.email}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Số tài liệu sở hữu</span>
-              <span className="detail-val">{loading ? "..." : `${docCount} tài liệu`}</span>
+              <span className="detail-label">{t("profile.ownedDocs")}</span>
+              <span className="detail-val">{loading ? "..." : t("profile.docCount", { count: docCount })}</span>
             </div>
             <div className="detail-row">
-              <span className="detail-label">Nền tảng Cloud</span>
+              <span className="detail-label">{t("profile.cloudPlatform")}</span>
               <span className="detail-val">Amazon Web Services (AWS)</span>
             </div>
           </div>
 
           <div className="profile-actions">
             <button className="btn btn-danger btn-block" onClick={handleLogout}>
-              Đăng xuất tài khoản
+              {t("profile.logoutBtn")}
             </button>
           </div>
         </div>
 
         {/* AWS Security Session Card */}
         <div className="card info-card">
-          <h3>Thông tin phiên bảo mật (Cognito Session)</h3>
-          <p className="intro">Dưới đây là chi tiết kỹ thuật từ JWT token được mã hóa sau khi đăng nhập thành công qua Cognito User Pool.</p>
+          <h3>{t("profile.sessionTitle")}</h3>
+          <p className="intro">{t("profile.sessionIntro")}</p>
           
           <div className="token-info-box">
             <div className="token-item">
               <strong>Cognito User Pool ID</strong>
-              <code>ap-southeast-1_uX87aD1Bq</code>
+              <code>{import.meta.env.VITE_COGNITO_USER_POOL_ID}</code>
             </div>
             
             <div className="token-item">
               <strong>App Client ID</strong>
-              <code>3n7b82md819asd72bmasd812bd</code>
+              <code>{import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID}</code>
             </div>
 
             <div className="token-item">
-              <strong>Mock JWT ID Token (Payload)</strong>
-              <pre className="jwt-payload-preview">
-{JSON.stringify({
-  "sub": "us-east-1:71b29a-28ab-412f-8da7-183017bc",
-  "email_verified": true,
-  "iss": "https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_uX87aD1Bq",
-  "cognito:username": currentUser.email,
-  "custom:role": currentUser.role,
-  "name": currentUser.name,
-  "exp": tokenExp
-}, null, 2)}
-              </pre>
+              <strong>{t("profile.authProvider")}</strong>
+              <span>{t("profile.cognitoSessionActive")}</span>
             </div>
           </div>
           
           <p className="security-notice">
-            * <strong>Lưu ý:</strong> Token này được sinh ngẫu nhiên để phục vụ quá trình giả lập phát triển local. Khi triển khai lên AWS, thư viện AWS Amplify SDK sẽ tự động xử lý và lưu trữ token này trong bộ nhớ trình duyệt một cách an toàn.
+            * {t("profile.tokenNote")}
           </p>
         </div>
       </div>

@@ -1,0 +1,42 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DocumentMetadataAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<STACK_NAME>-documents",
+        "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<STACK_NAME>-documents/index/*",
+        "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<STACK_NAME>-shares",
+        "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<STACK_NAME>-shares/index/*",
+        "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<STACK_NAME>-favorites",
+        "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/<STACK_NAME>-favorites/index/*"
+      ]
+    },
+    {
+      "Sid": "DocumentObjectsOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::<BUCKET_NAME>/users/*/documents/*"
+    },
+    {
+      "Sid": "ResolveShareRecipientByEmail",
+      "Effect": "Allow",
+      "Action": "cognito-idp:ListUsers",
+      "Resource": "arn:aws:cognito-idp:<REGION>:<ACCOUNT_ID>:userpool/<USER_POOL_ID>"
+    }
+  ]
+}

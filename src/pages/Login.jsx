@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import { useTranslation } from "react-i18next";
 
 const Login = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [mode, setMode] = useState("login");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Redirect if already authenticated
@@ -22,18 +28,26 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await authService.login(email, password);
-      navigate("/dashboard");
+      if (mode === "login") {
+        await authService.login(email, password);
+        navigate("/dashboard");
+      } else if (mode === "request-reset") {
+        await authService.forgotPassword(email);
+        setMode("confirm-reset");
+        setNotice(t("auth.resetCodeSent", { email }));
+      } else {
+        await authService.confirmForgotPassword(email, resetCode, newPassword);
+        setMode("login");
+        setPassword("");
+        setResetCode("");
+        setNewPassword("");
+        setNotice(t("auth.passwordResetSuccess"));
+      }
     } catch (err) {
-      setError(err.message || "Đã xảy ra lỗi đăng nhập!");
+      setError(t(err.message) || t("auth.loginError"));
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFillDemo = (demoEmail) => {
-    setEmail(demoEmail);
-    setPassword("password123");
   };
 
   return (
@@ -46,14 +60,15 @@ const Login = () => {
             </svg>
           </div>
           <h2>UniCloud DMS</h2>
-          <p className="subtitle">Hệ thống Quản lý Tài liệu Serverless</p>
+          <p className="subtitle">{t("auth.systemSubtitle")}</p>
         </div>
 
         {error && <div className="auth-error-alert">{error}</div>}
+        {notice && <div className="auth-info-alert">{notice}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Địa chỉ Email</label>
+            <label htmlFor="email">{t("auth.email")}</label>
             <input
               type="email"
               id="email"
@@ -62,60 +77,61 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || mode === "confirm-reset"}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Mật khẩu</label>
-            <input
-              type="password"
-              id="password"
-              className="form-control"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
+          {mode === "login" && (
+            <div className="form-group">
+              <label htmlFor="password">{t("auth.password")}</label>
+              <input
+                type="password"
+                id="password"
+                className="form-control"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+          )}
+
+          {mode === "confirm-reset" && (
+            <>
+              <div className="form-group">
+                <label htmlFor="reset-code">{t("auth.passwordResetCode")}</label>
+                <input id="reset-code" className="form-control" value={resetCode} onChange={(e) => setResetCode(e.target.value)} required disabled={loading} autoComplete="one-time-code" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="new-password">{t("auth.newPassword")}</label>
+                <input id="new-password" type="password" className="form-control" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={loading} autoComplete="new-password" />
+              </div>
+            </>
+          )}
 
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? (
               <span className="spinner-container">
-                <span className="spinner"></span> Đang xác thực...
+                <span className="spinner"></span> {t("auth.authenticating")}
               </span>
             ) : (
-              "Đăng Nhập"
+              mode === "login" ? t("auth.loginAction") : mode === "request-reset" ? t("auth.sendResetCode") : t("auth.setNewPassword")
             )}
           </button>
         </form>
 
         <div className="auth-footer">
-          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+          {mode === "login" ? (
+            <>
+              <button type="button" className="auth-text-button" onClick={() => { setMode("request-reset"); setError(""); setNotice(""); }}>{t("auth.forgotPassword")}</button>
+              <div>{t("auth.noAccount")} <Link to="/register">{t("auth.register")}</Link></div>
+            </>
+          ) : (
+            <button type="button" className="auth-text-button" onClick={() => { setMode("login"); setError(""); setNotice(""); }}>{t("auth.backToLogin")}</button>
+          )}
         </div>
 
-        <div className="demo-accounts-box">
-          <p className="demo-title">Tài khoản trải nghiệm nhanh:</p>
-          <div className="demo-buttons">
-            <button 
-              type="button" 
-              className="btn btn-outline-sm" 
-              onClick={() => handleFillDemo("nguyen.van.a@university.edu.vn")}
-              disabled={loading}
-            >
-              GV Nguyễn Văn A (Admin)
-            </button>
-            <button 
-              type="button" 
-              className="btn btn-outline-sm" 
-              onClick={() => handleFillDemo("tran.thi.b@university.edu.vn")}
-              disabled={loading}
-            >
-              SV Trần Thị B (Student)
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

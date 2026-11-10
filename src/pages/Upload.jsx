@@ -1,8 +1,10 @@
 import React, { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { documentService } from "../services/documentService";
 
 const Upload = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -48,7 +50,7 @@ const Upload = () => {
     if (!allowedExtensions.includes(fileExtension)) {
       setFeedback({
         type: "error",
-        message: `Định dạng tệp .${fileExtension} không được hỗ trợ! Hệ thống chỉ hỗ trợ các tệp: ${allowedExtensions.map(e => e.toUpperCase()).join(", ")}.`
+        message: t("upload.invalidExtension", { extension: fileExtension, allowed: allowedExtensions.map(e => e.toUpperCase()).join(", ") })
       });
       setSelectedFile(null);
       return;
@@ -58,7 +60,7 @@ const Upload = () => {
     if (file.size > 20 * 1024 * 1024) {
       setFeedback({
         type: "error",
-        message: "Kích thước tệp vượt quá giới hạn cho phép (Tối đa 20MB)!"
+        message: t("upload.fileTooLarge")
       });
       setSelectedFile(null);
       return;
@@ -105,7 +107,7 @@ const Upload = () => {
       setUploadProgress(100);
       setFeedback({
         type: "success",
-        message: "Chúc mừng! Tài liệu đã được tải lên trực tiếp S3 và lưu thông tin vào DynamoDB thành công."
+        message: t("upload.uploadSuccessMsg")
       });
 
       // Clear input fields
@@ -125,7 +127,7 @@ const Upload = () => {
       setUploadProgress(0);
       setFeedback({
         type: "error",
-        message: err.message || "Tải lên tệp thất bại! Vui lòng thử lại."
+        message: `${t(err.message) || t("upload.uploadFailedMsg")}${err.s3Details ? ` (${err.s3Details})` : ""}`
       });
     } finally {
       setUploading(false);
@@ -143,8 +145,8 @@ const Upload = () => {
   return (
     <div className="upload-page">
       <div className="page-header">
-        <h1>Tải tài liệu mới lên đám mây</h1>
-        <p className="subtitle">Lưu trữ tệp tin an toàn trên S3. Thông tin tệp sẽ được ghi vào cơ sở dữ liệu DynamoDB.</p>
+        <h1>{t("upload.title")}</h1>
+        <p className="subtitle">{t("upload.desc")}</p>
       </div>
 
       {feedback.message && (
@@ -180,8 +182,8 @@ const Upload = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
                     </svg>
                   </div>
-                  <h3>Kéo thả tệp tin vào đây hoặc nhấp để chọn</h3>
-                  <p className="dropzone-hint">Hỗ trợ các tệp PDF, Word, Excel, PowerPoint, Ảnh (Tối đa 20MB)</p>
+                  <h3>{t("upload.dragDrop")}</h3>
+                  <p className="dropzone-hint">{t("upload.chooseFile")}</p>
                 </div>
               ) : (
                 <div className="dropzone-content file-selected-content">
@@ -191,7 +193,7 @@ const Upload = () => {
                     </span>
                   </div>
                   <h3>{selectedFile.name}</h3>
-                  <p className="file-size-hint">Kích thước: {formatBytes(selectedFile.size)}</p>
+                  <p className="file-size-hint">{t("detail.fileSize")}: {formatBytes(selectedFile.size)}</p>
                   <button 
                     type="button" 
                     className="btn btn-outline-sm btn-remove-file"
@@ -202,14 +204,14 @@ const Upload = () => {
                     }}
                     disabled={uploading}
                   >
-                    Chọn tệp khác
+                    {t("upload.chooseAnotherFile")}
                   </button>
                 </div>
               )}
             </div>
 
             <div className="form-group margin-top-md">
-              <label htmlFor="category">Danh mục (Category)</label>
+              <label htmlFor="category">{t("upload.category")}</label>
               <select
                 id="category"
                 className="form-control"
@@ -217,22 +219,22 @@ const Upload = () => {
                 onChange={(e) => setCategory(e.target.value)}
                 disabled={uploading}
               >
-                <option value="Other">Khác (Other)</option>
-                <option value="Work">Công việc (Work)</option>
-                <option value="Finance">Tài chính (Finance)</option>
-                <option value="HR">Nhân sự (HR)</option>
-                <option value="Technical">Kỹ thuật (Technical)</option>
-                <option value="Meeting">Cuộc họp (Meeting)</option>
+                <option value="Other">{t("categories.other")}</option>
+                <option value="Work">{t("categories.work")}</option>
+                <option value="Finance">{t("categories.finance")}</option>
+                <option value="HR">{t("categories.hr")}</option>
+                <option value="Technical">{t("categories.technical")}</option>
+                <option value="Meeting">{t("categories.meeting")}</option>
               </select>
             </div>
 
             <div className="form-group margin-top-md">
-              <label htmlFor="tags">Thẻ (Tags)</label>
+              <label htmlFor="tags">{t("upload.tags")}</label>
               <input
                 type="text"
                 id="tags"
                 className="form-control"
-                placeholder="Nhập thẻ cách nhau bằng dấu phẩy (vd: aws, report)"
+                placeholder={t("upload.tagsPlaceholder")}
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
                 disabled={uploading}
@@ -240,12 +242,12 @@ const Upload = () => {
             </div>
 
             <div className="form-group margin-top-md">
-              <label htmlFor="description">Mô tả tài liệu (Không bắt buộc)</label>
+              <label htmlFor="description">{t("upload.description")}</label>
               <textarea
                 id="description"
                 className="form-control"
                 rows="3"
-                placeholder="Nhập mô tả ngắn gọn về tài liệu này (sẽ lưu trữ dưới dạng metadata)..."
+                placeholder={t("upload.descriptionPlaceholder")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={uploading}
@@ -255,7 +257,7 @@ const Upload = () => {
             {uploading && (
               <div className="progress-container">
                 <div className="progress-labels">
-                  <span>Đang tải lên AWS S3...</span>
+                  <span>{t("upload.uploading")}</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <div className="progress-bar-bg">
@@ -270,7 +272,7 @@ const Upload = () => {
                 className="btn btn-primary btn-block" 
                 disabled={!selectedFile || uploading}
               >
-                {uploading ? "Đang xử lý tải lên..." : "Bắt đầu tải lên S3"}
+                {uploading ? t("upload.uploading") : t("upload.uploadBtn")}
               </button>
             </div>
           </form>
@@ -278,39 +280,39 @@ const Upload = () => {
 
         {/* Informative S3 Flow Explainer */}
         <div className="card info-card">
-          <h3>Quy trình tải lên Serverless S3</h3>
-          <p className="intro">Kiến trúc Cloud trong các giai đoạn tiếp theo sẽ hoạt động như thế nào?</p>
+          
+          
           <div className="s3-steps">
             <div className="s3-step">
               <div className="s3-step-header">
                 <span className="s3-step-badge">1</span>
-                <h4>Lấy Presigned URL</h4>
+                <h4>{t("upload.step1Title")}</h4>
               </div>
-              <p>Trình duyệt gửi yêu cầu REST API POST đến API Gateway để xin quyền tải lên S3.</p>
+              <p>{t("upload.step1Desc")}</p>
             </div>
             
             <div className="s3-step">
               <div className="s3-step-header">
                 <span className="s3-step-badge">2</span>
-                <h4>Sinh URL bảo mật (Lambda)</h4>
+                <h4>{t("upload.step2Title")}</h4>
               </div>
-              <p>Lambda function xử lý yêu cầu, tạo ra một S3 Presigned URL bảo mật (có thời hạn ngắn).</p>
+              <p>{t("upload.step2Desc")}</p>
             </div>
 
             <div className="s3-step">
               <div className="s3-step-header">
                 <span className="s3-step-badge">3</span>
-                <h4>Tải lên S3 Trực tiếp</h4>
+                <h4>{t("upload.step3Title")}</h4>
               </div>
-              <p>Trình duyệt nhận được URL và thực hiện upload file trực tiếp (HTTP PUT) lên AWS S3. Cách tiếp cận này giúp Lambda không cần gánh dung lượng tệp lớn, tăng tối đa hiệu suất.</p>
+              <p>{t("upload.step3Desc")}</p>
             </div>
 
             <div className="s3-step">
               <div className="s3-step-header">
                 <span className="s3-step-badge">4</span>
-                <h4>Trigger cập nhật Metadata</h4>
+                <h4>{t("upload.step4Title")}</h4>
               </div>
-              <p>Khi tải lên S3 thành công, Lambda thứ 2 sẽ tự động kích hoạt thông qua S3 Event để phân tích tài liệu và ghi nhận siêu dữ liệu tệp vào bảng DynamoDB.</p>
+              <p>{t("upload.step4Desc")}</p>
             </div>
           </div>
         </div>

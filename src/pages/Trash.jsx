@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n/config";
 import { documentService } from "../services/documentService";
-import { authService } from "../services/authService";
 
 const Trash = () => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
-  const currentUser = authService.getCurrentUser();
 
   const loadDocuments = async () => {
     try {
       const data = await documentService.getTrashedDocuments();
       setDocuments(data);
     } catch (err) {
-      setError("Không thể tải danh sách thùng rác!");
+      setError(t("errors.loadTrashFailed"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -32,10 +32,10 @@ const Trash = () => {
     try {
       await documentService.restoreFromTrash(documentId);
       setDocuments((prevDocs) => prevDocs.filter((d) => d.documentId !== documentId));
-      showFeedback("success", "Đã khôi phục tài liệu thành công!");
+      showFeedback("success", t("trash.restoreSuccess"));
     } catch (err) {
       console.error(err);
-      showFeedback("error", err.message || "Lỗi khi khôi phục tài liệu!");
+      showFeedback("error", t(err.message) || t("errors.restoreFailed"));
     }
   };
 
@@ -48,11 +48,11 @@ const Trash = () => {
       await documentService.permanentlyDelete(deleteId);
       setDeleteId(null);
       loadDocuments();
-      showFeedback("success", "Đã xóa vĩnh viễn tài liệu!");
+      showFeedback("success", t("trash.deleteSuccess"));
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Xóa thất bại! Vui lòng thử lại."
+        message: t(err.message) || t("errors.deleteFailed")
       });
       console.error(err);
     } finally {
@@ -75,7 +75,7 @@ const Trash = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
+    return new Date(dateString).toLocaleDateString(i18n.language === "vi" ? "vi-VN" : "en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -88,7 +88,7 @@ const Trash = () => {
     return (
       <div className="loading-wrapper">
         <div className="spinner"></div>
-        <p>Đang tải danh sách thùng rác...</p>
+        <p>{t("trash.loading")}</p>
       </div>
     );
   }
@@ -96,14 +96,14 @@ const Trash = () => {
   return (
     <div className="documents-page">
       <div className="page-header">
-        <h1>Thùng rác</h1>
-        <p className="subtitle">Các tài liệu đã bị xóa. Bạn có thể khôi phục hoặc xóa vĩnh viễn chúng.</p>
+        <h1>{t("trash.title")}</h1>
+        <p className="subtitle">{t("trash.desc")}</p>
       </div>
 
       {error ? (
         <div className="error-container">
           <p>{error}</p>
-          <button className="btn btn-primary" onClick={loadDocuments}>Thử lại</button>
+          <button className="btn btn-primary" onClick={loadDocuments}>{t("actions.retry")}</button>
         </div>
       ) : (
         <>
@@ -118,8 +118,8 @@ const Trash = () => {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="empty-icon">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
               </svg>
-              <h3>Thùng rác trống</h3>
-              <p>Không có tài liệu nào trong thùng rác.</p>
+              <h3>{t("trash.emptyState")}</h3>
+              <p>{t("documents.noResults")}</p>
             </div>
           ) : (
             <div className="table-card">
@@ -127,11 +127,11 @@ const Trash = () => {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Tên tệp</th>
-                      <th>Loại</th>
-                      <th>Kích thước</th>
-                      <th>Ngày xóa</th>
-                      <th className="text-right">Hành động</th>
+                      <th>{t("documents.fileName")}</th>
+                      <th>{t("detail.fileType")}</th>
+                      <th>{t("documents.size")}</th>
+                      <th>{t("trash.deletedAt")}</th>
+                      <th className="text-right">{t("documents.actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -153,7 +153,7 @@ const Trash = () => {
                             <button 
                               className="btn-icon-action text-primary" 
                               onClick={() => handleRestore(doc.documentId)}
-                              title="Khôi phục"
+                              title={t("trash.restore")}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon-sm">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -162,7 +162,7 @@ const Trash = () => {
                             <button 
                               className="btn-icon-action text-danger" 
                               onClick={() => setDeleteId(doc.documentId)}
-                              title="Xóa vĩnh viễn"
+                              title={t("trash.permanentDelete")}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="icon-sm">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -183,12 +183,12 @@ const Trash = () => {
             <div className="modal-overlay">
               <div className="modal">
                 <div className="modal-header">
-                  <h3>Xác nhận xóa vĩnh viễn</h3>
+                  <h3>{t("trash.permanentDeleteConfirmTitle")}</h3>
                   <button className="modal-close-btn" onClick={() => setDeleteId(null)}>&times;</button>
                 </div>
                 <div className="modal-body">
-                  <p>Bạn có chắc chắn muốn xóa vĩnh viễn tài liệu này khỏi hệ thống? Hành động này sẽ loại bỏ tệp vĩnh viễn khỏi AWS S3 bucket và thông tin lưu trữ trong DynamoDB.</p>
-                  <p className="delete-warning"><strong>Cảnh báo:</strong> Thao tác này không thể hoàn tác.</p>
+                  <p>{t("trash.permanentDeleteConfirmMsg")}</p>
+                  <p className="delete-warning"><strong>{t("trash.warning")}:</strong> {t("trash.cannotUndo")}</p>
                 </div>
                 <div className="modal-footer">
                   <button 
@@ -196,14 +196,14 @@ const Trash = () => {
                     onClick={() => setDeleteId(null)}
                     disabled={actionLoading}
                   >
-                    Hủy bỏ
+                    {t("actions.cancel")}
                   </button>
                   <button 
                     className="btn btn-danger" 
                     onClick={handleDeleteConfirm}
                     disabled={actionLoading}
                   >
-                    {actionLoading ? "Đang xử lý..." : "Xác nhận xóa vĩnh viễn"}
+                    {actionLoading ? t("actions.processing") : t("trash.permanentDeleteConfirmBtn")}
                   </button>
                 </div>
               </div>

@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import { useTranslation } from "react-i18next";
 
 const Register = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,23 +26,54 @@ const Register = () => {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
-      setError("Mật khẩu xác nhận không trùng khớp!");
+    if (confirmationPending) {
+      setLoading(true);
+      try {
+        await authService.confirmRegistration(email, confirmationCode);
+        await authService.login(email, password);
+        navigate("/dashboard");
+      } catch (err) {
+        setError(t(err.message) || t("auth.registerError"));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
-    if (password.length < 6) {
-      setError("Mật khẩu phải chứa ít nhất 6 ký tự!");
+    if (password !== confirmPassword) {
+      setError(t("auth.passwordMatchError"));
+      return;
+    }
+
+    if (password.length < 12) {
+      setError(t("auth.passwordMinLength"));
       return;
     }
 
     setLoading(true);
 
     try {
-      await authService.register(name, email, password);
-      navigate("/dashboard");
+      const result = await authService.register(name, email, password);
+      if (result.isConfirmed) {
+        await authService.login(email, password);
+        navigate("/dashboard");
+      } else {
+        setConfirmationPending(true);
+      }
     } catch (err) {
-      setError(err.message || "Đã xảy ra lỗi đăng ký tài khoản!");
+      setError(t(err.message) || t("auth.registerError"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await authService.resendConfirmationCode(email);
+    } catch (err) {
+      setError(t(err.message) || t("auth.registerError"));
     } finally {
       setLoading(false);
     }
@@ -54,19 +89,45 @@ const Register = () => {
             </svg>
           </div>
           <h2>UniCloud DMS</h2>
-          <p className="subtitle">Tạo tài khoản sinh viên mới</p>
+          <p className="subtitle">{t("auth.registerSubtitle")}</p>
         </div>
 
         {error && <div className="auth-error-alert">{error}</div>}
 
+        {confirmationPending ? (
+          <>
+            <p className="subtitle">{t("auth.confirmationSent", { email })}</p>
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="form-group">
+                <label htmlFor="confirmationCode">{t("auth.confirmationCode")}</label>
+                <input
+                  type="text"
+                  id="confirmationCode"
+                  className="form-control"
+                  value={confirmationCode}
+                  onChange={(e) => setConfirmationCode(e.target.value)}
+                  autoComplete="one-time-code"
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+                {loading ? t("actions.processing") : t("auth.confirmCodeAction")}
+              </button>
+            </form>
+            <button type="button" className="btn btn-secondary btn-block" onClick={handleResendCode} disabled={loading}>
+              {t("auth.resendCode")}
+            </button>
+          </>
+        ) : (
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="name">Họ và tên</label>
+            <label htmlFor="name">{t("auth.name")}</label>
             <input
               type="text"
               id="name"
               className="form-control"
-              placeholder="Nguyễn Văn A"
+              placeholder={t("auth.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -75,7 +136,7 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Địa chỉ Email</label>
+            <label htmlFor="email">{t("auth.email")}</label>
             <input
               type="email"
               id="email"
@@ -89,12 +150,13 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Mật khẩu</label>
+            <label htmlFor="password">{t("auth.password")}</label>
             <input
               type="password"
               id="password"
               className="form-control"
-              placeholder="•••••••• (Tối thiểu 6 ký tự)"
+              placeholder={t("auth.passwordMinPlaceholder")}
+              minLength={12}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -103,7 +165,7 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+            <label htmlFor="confirmPassword">{t("auth.confirmPassword")}</label>
             <input
               type="password"
               id="confirmPassword"
@@ -119,16 +181,17 @@ const Register = () => {
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? (
               <span className="spinner-container">
-                <span className="spinner"></span> Đang xử lý...
+                <span className="spinner"></span> {t("actions.processing")}
               </span>
             ) : (
-              "Đăng Ký Tài Khoản"
+              t("auth.registerAction")
             )}
           </button>
         </form>
+        )}
 
         <div className="auth-footer">
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+          {t("auth.haveAccount")} <Link to="/login">{t("auth.login")}</Link>
         </div>
       </div>
     </div>

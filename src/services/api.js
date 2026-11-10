@@ -1,28 +1,29 @@
 import axios from "axios";
+import { authService } from "./authService";
 
-// This is a placeholder for future AWS API Gateway URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.example.com/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-// Interceptor to inject Cognito JWT Token in the future
-api.interceptors.request.use(
-  (config) => {
-    const userJson = localStorage.getItem("sdms_current_user");
-    if (userJson) {
-      const user = JSON.parse(userJson);
-      if (user && user.token) {
-        config.headers.Authorization = `Bearer ${user.token}`;
-      }
-    }
-    return config;
-  },
+api.interceptors.request.use(async (config) => {
+  if (!API_BASE_URL) throw new Error("errors.awsApiNotConfigured");
+  const idToken = await authService.getIdToken();
+  if (idToken) config.headers.Authorization = `Bearer ${idToken}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
+    const status = error.response?.status;
+    const serverMessage = error.response?.data?.message;
+    if (status === 401) error.message = "errors.authSessionExpired";
+    else if (status === 403) error.message = "errors.accessDenied";
+    else if (serverMessage) error.message = serverMessage;
+    else if (!error.response) error.message = "errors.apiNetworkError";
     return Promise.reject(error);
   }
 );
