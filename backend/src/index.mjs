@@ -473,7 +473,7 @@ const downloadUrl = async (item) => {
   return json(200, { downloadUrl: url, expiresIn: 300, fileName: item.fileName });
 };
 
-export const handler = async (event) => {
+const handleApiRequest = async (event) => {
   const routeKey = event?.requestContext?.routeKey;
   const method = event.requestContext?.http?.method || event.httpMethod;
   // API Gateway routes preflight requests here without requiring a Cognito token.
@@ -523,4 +523,24 @@ export const handler = async (event) => {
     console.error("Unhandled API error", { name: error.name, message: error.message });
     return json(500, { message: "Internal server error" });
   }
+};
+
+export const handler = async (event) => {
+  const startedAt = Date.now();
+  const requestId = event?.requestContext?.requestId || "unknown";
+  const method = event?.requestContext?.http?.method || event?.httpMethod || "unknown";
+  // Prefer the API Gateway route template so document IDs and query values are not logged.
+  const route = event?.requestContext?.routeKey || "unknown";
+
+  const response = await handleApiRequest(event);
+
+  console.info("API request completed", {
+    requestId,
+    method,
+    route,
+    statusCode: response?.statusCode ?? 500,
+    durationMs: Date.now() - startedAt,
+  });
+
+  return response;
 };

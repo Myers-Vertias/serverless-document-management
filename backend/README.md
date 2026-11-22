@@ -1,27 +1,41 @@
 # DMS serverless backend
 
-This folder contains the AWS SAM infrastructure and Lambda API source for the document management project. It is not deployed just by being added here.
+This folder contains the AWS SAM template and Lambda API source for UniCloud DMS.
 
-## Implemented routes
+## Previously deployed environment
 
-- Public `GET /health` for a local or deployed availability check.
-- Cognito-authenticated document routes: upload URL, upload completion, owned/trash/shared lists, document detail and metadata update, download URL, trash/restore/permanent delete, share/revoke, and favorites.
-- File upload/download uses short-lived S3 presigned URLs; the browser sends file bytes directly to the private bucket.
-- Lambda derives the caller `sub` from API Gateway's verified JWT claims. Ownership is never accepted from request JSON.
-- Uploads are limited to 20 MiB and the file extensions accepted by the current frontend.
+- Stack: `dms-dev`
+- Region: `ap-southeast-1`
+- API: API Gateway HTTP API `6wcs1urcm2`
+- Lambda functions: `dms-dev-documents` and `dms-dev-health`
+- Cognito User Pool: `ap-southeast-1_hWIAdC6Xu`
+- DynamoDB tables: `dms-dev-documents`, `dms-dev-shares`, and `dms-dev-favorites`
+- Frontend: AWS Amplify production branch `main`
 
-The document Lambda uses the AWS SDK for JavaScript v3 supplied by the Node.js Lambda runtime. AWS can update that runtime copy; bundle pinned SDK packages if the project later needs a fixed SDK version. [AWS runtime dependency documentation](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-package.html).
+The stack and application workflows were deployed and exercised in `ap-southeast-1`, then the project resources were cleaned up on November 19, 2026. The identifiers above describe that completed deployment; they are not an active environment. Review the CloudFormation change set before a future deployment; AWS resources may incur charges.
 
-## IAM permissions required by the Lambda role
+## API routes and behavior
 
-The pre-created `dms-lambda-execution` role currently has CloudWatch Logs access. Before document routes can operate against AWS, attach a least-privilege policy based on `iam/lambda-runtime-policy.template.json`, replacing the resource placeholders with the exact stack table, bucket, Cognito pool, account, and Region values. The `dms-dev` user cannot attach policies to IAM roles; use the account's authorized administrator for that step. Do not grant `AdministratorAccess` to the Lambda role.
+- `GET /health` is public and returns the service health response.
+- `ANY /{proxy+}` invokes the document Lambda and is protected by the Cognito JWT authorizer.
+- `OPTIONS /{proxy+}` is unauthenticated to support CORS preflight.
+- Authenticated document routes cover upload URL/completion, owned/trash/shared lists, document details and metadata, download URL, trash/restore/permanent delete, share/revoke, and Favorites.
+- Lambda derives the caller `sub` from API Gateway's verified JWT claims. Ownership is not accepted from request JSON.
+- Upload/download use short-lived S3 presigned URLs. The browser transfers file bytes directly to the private S3 bucket.
+- Uploads are limited to 20 MiB and the extensions accepted by the current frontend. The deployed API returned HTTP `400` for an authenticated upload-url request specifying 20 MiB + 1 byte; the evidence is in the workshop report, section 5.10.1.
 
-## Before deployment
+## AWS permissions
 
-1. Create and verify the AWS Budget alert in the account.
-2. Confirm the AWS CLI identity is `user/dms-dev`, Region is `ap-southeast-1`, and the role ARN parameter is the dedicated `dms-lambda-execution` role.
-3. Review the resource names, IAM policy, and deployment plan. `sam deploy` creates AWS resources that may incur charges; this scaffold has not been deployed.
-4. Verify the budget, role permissions, and cleanup plan before provisioning.
+Both Lambda functions used the configured `LambdaExecutionRoleArn` parameter. The captured role permission screen showed `AWSLambdaBasicExecutionRole` and the project runtime policy attached. The policy source files are:
+
+- `iam/lambda-runtime-policy.template.json`
+- `iam/lambda-runtime-policy.ap-southeast-1.json`
+
+The runtime policy scopes DynamoDB access to the three project tables/indexes, S3 access to the documents bucket prefix, and Cognito lookup access to the project User Pool. The IAM role was removed during cleanup. Do not grant `AdministratorAccess` to the Lambda role if redeploying.
+
+## Observability
+
+The deployed environment's screenshots recorded Lambda `START`/`END`/`REPORT` events, API Gateway access logs, an error alarm, and a confirmed SNS email subscription in the workshop report, section 5.11.1. The current local source also includes a structured completion record for document Lambda invocations; this source change was not part of the cleaned-up deployment. It avoids logging raw paths, query values, request bodies, JWTs, and presigned URLs.
 
 ## Local commands
 
@@ -33,4 +47,6 @@ sam build
 sam local start-api --port 3000
 ```
 
-The local health endpoint is `http://127.0.0.1:3000/health`. Authenticated routes need a valid Cognito JWT and AWS service access; the SAM local health check does not prove those integrations work. Keep any generated `samconfig.toml` local; it is ignored by Git.
+The local health endpoint is `http://127.0.0.1:3000/health`. Authenticated routes need a valid Cognito JWT and AWS service access; the SAM local health check does not prove those integrations work.
+
+For an authorized infrastructure update, use the appropriate AWS profile and inspect the proposed change set before confirming deployment. Do not store AWS credentials, JWTs, presigned URLs, or secrets in source control. Amplify builds the frontend separately from this backend folder.
